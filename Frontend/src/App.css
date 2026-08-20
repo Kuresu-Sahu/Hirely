@@ -1,0 +1,404 @@
+/* =========================================================
+   JOB PORTAL
+   COMPONENT POLISH LAYER
+
+   This file intentionally contains the visual details
+   that complement the global design system in index.css.
+========================================================= */
+
+
+/* =========================================================
+   DASHBOARD CARD MICRO-INTERACTIONS
+========================================================= */
+
+.dashboard-card {
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+.dashboard-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+
+    left: 0;
+
+    right: 0;
+
+    height: 3px;
+
+    opacity: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            #2563eb,
+            #4f46e5
+        );
+
+    transition:
+        opacity 0.2s ease;
+}
+
+
+.dashboard-card:hover::before {
+
+    opacity: 1;
+}
+
+
+/* =========================================================
+   JOB CARD POLISH
+========================================================= */
+
+.job-card {
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+.job-card::after {
+
+    content: "";
+
+    position: absolute;
+
+    width: 90px;
+
+    height: 90px;
+
+    top: -50px;
+
+    right: -40px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(
+            37,
+            99,
+            235,
+            0.045
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   CARD HEADERS
+========================================================= */
+
+.jobs-header,
+.applications-header,
+.resume-header {
+
+    position: relative;
+}
+
+
+.jobs-header::after,
+.applications-header::after,
+.resume-header::after {
+
+    content: "";
+
+    display: block;
+
+    width: 48px;
+
+    height: 4px;
+
+    margin-top: 14px;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #2563eb,
+            #4f46e5
+        );
+}
+
+
+/* =========================================================
+   FORM CARDS
+========================================================= */
+
+.form-card,
+.apply-card {
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+.form-card::before,
+.apply-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+
+    left: 0;
+
+    right: 0;
+
+    height: 3px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #2563eb,
+            #4f46e5
+        );
+}
+
+
+/* =========================================================
+   APPLICATION CARD
+========================================================= */
+
+.application-card {
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+.application-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+
+    top: 0;
+
+    bottom: 0;
+
+    width: 3px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #2563eb,
+            #4f46e5
+        );
+
+    opacity: 0.85;
+}
+
+
+/* =========================================================
+   TABLE-LIKE INFORMATION BLOCKS
+========================================================= */
+
+.application-info > div,
+.resume-details > div,
+.job-info-grid > div {
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+
+.application-info > div:hover,
+.resume-details > div:hover,
+.job-info-grid > div:hover {
+
+    border-color: #cbd5e1;
+
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   FILE INPUT
+========================================================= */
+
+input[type="file"]::file-selector-button {
+
+    margin-right: 12px;
+
+    padding: 8px 12px;
+
+    border: 1px solid #bfdbfe;
+
+    border-radius: 7px;
+
+    background: #eff6ff;
+
+    color: #1d4ed8;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar {
+
+    width: 9px;
+
+    height: 9px;
+}
+
+
+::-webkit-scrollbar-track {
+
+    background: #f1f5f9;
+}
+
+
+::-webkit-scrollbar-thumb {
+
+    border: 2px solid #f1f5f9;
+
+    border-radius: 999px;
+
+    background: #cbd5e1;
+}
+
+
+::-webkit-scrollbar-thumb:hover {
+
+    background: #94a3b8;
+}
+
+
+/* =========================================================
+   FOCUS ACCESSIBILITY
+========================================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+
+    outline: 3px solid
+        rgba(
+            37,
+            99,
+            235,
+            0.22
+        );
+
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+
+        scroll-behavior: auto !important;
+
+        transition-duration: 0.01ms !important;
+
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* Production icon system */
+.app-icon {
+    display: inline-block;
+    flex: 0 0 auto;
+    vertical-align: middle;
+}
+
+button .app-icon,
+a .app-icon,
+.nav-item .app-icon,
+.sidebar-nav-item .app-icon {
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+
+button:hover .app-icon,
+a:hover .app-icon {
+    transform: translateY(-0.5px);
+}
+
+.icon-button {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #fff;
+    color: #475569;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.icon-button:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.icon-button.danger { color: #dc2626; }
+.icon-button.danger:hover { background: #fef2f2; border-color: #fecaca; }
+
+/* Dark theme refinements for the component polish layer */
+html[data-theme="dark"] .application-info > div:hover,
+html[data-theme="dark"] .resume-details > div:hover,
+html[data-theme="dark"] .job-info-grid > div:hover {
+    border-color: #40516a;
+    background: #182336;
+}
+
+html[data-theme="dark"] .icon-button {
+    border-color: var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .icon-button:hover {
+    background: #182336;
+    border-color: #52627a;
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .icon-button.danger {
+    color: #fb7185;
+}
+
+html[data-theme="dark"] .icon-button.danger:hover {
+    background: #35161d;
+    border-color: #5b2530;
+}

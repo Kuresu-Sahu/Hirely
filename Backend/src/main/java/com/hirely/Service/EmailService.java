@@ -36,7 +36,10 @@ public class EmailService {
     public void sendOtpEmail(String email, String otp, OtpPurpose purpose) {
 
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            throw new IllegalStateException("RESEND_API_KEY is not configured");
+            System.err.println("RESEND ERROR: RESEND_API_KEY is not configured");
+
+            throw new IllegalStateException(
+                    "RESEND_API_KEY is not configured");
         }
 
         String subject;
@@ -87,6 +90,7 @@ public class EmailService {
         }
 
         try {
+
             String requestBody = objectMapper.writeValueAsString(
                     new ResendEmailRequest(
                             FROM_EMAIL,
@@ -102,21 +106,36 @@ public class EmailService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
 
+            System.out.println("RESEND: Sending email to " + email);
+
             HttpResponse<String> response = httpClient.send(
                     request,
                     HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            System.out.println(
+                    "RESEND: HTTP Status = " + response.statusCode());
+
+            System.out.println(
+                    "RESEND: Response = " + response.body());
+
+            if (response.statusCode() < 200
+                    || response.statusCode() >= 300) {
+
                 throw new IllegalStateException(
-                        "Resend email API failed. HTTP "
+                        "Resend API returned HTTP "
                                 + response.statusCode()
                                 + ": "
                                 + response.body());
             }
 
+            System.out.println("RESEND: Email sent successfully");
+
         } catch (InterruptedException e) {
 
             Thread.currentThread().interrupt();
+
+            System.err.println(
+                    "RESEND ERROR: Email sending was interrupted");
 
             throw new IllegalStateException(
                     "Email sending was interrupted",
@@ -124,8 +143,14 @@ public class EmailService {
 
         } catch (Exception e) {
 
+            System.err.println(
+                    "RESEND ERROR: " + e.getMessage());
+
+            e.printStackTrace();
+
             throw new IllegalStateException(
-                    "Failed to send email through Resend",
+                    "Failed to send email through Resend: "
+                            + e.getMessage(),
                     e);
         }
     }

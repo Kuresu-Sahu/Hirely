@@ -36,10 +36,7 @@ public class EmailService {
     public void sendOtpEmail(String email, String otp, OtpPurpose purpose) {
 
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            System.err.println("RESEND ERROR: RESEND_API_KEY is not configured");
-
-            throw new IllegalStateException(
-                    "RESEND_API_KEY is not configured");
+            throw new IllegalStateException("Email service is temporarily unavailable");
         }
 
         String subject;
@@ -90,7 +87,6 @@ public class EmailService {
         }
 
         try {
-
             String requestBody = objectMapper.writeValueAsString(
                     new ResendEmailRequest(
                             FROM_EMAIL,
@@ -106,52 +102,42 @@ public class EmailService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
 
-            System.out.println("RESEND: Sending email to " + email);
-
             HttpResponse<String> response = httpClient.send(
                     request,
                     HttpResponse.BodyHandlers.ofString());
 
-            System.out.println(
-                    "RESEND: HTTP Status = " + response.statusCode());
-
-            System.out.println(
-                    "RESEND: Response = " + response.body());
-
-            if (response.statusCode() < 200
-                    || response.statusCode() >= 300) {
-
-                throw new IllegalStateException(
-                        "Resend API returned HTTP "
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                System.err.println(
+                        "Resend API error. HTTP "
                                 + response.statusCode()
                                 + ": "
                                 + response.body());
-            }
 
-            System.out.println("RESEND: Email sent successfully");
+                throw new IllegalStateException(
+                        "Unable to send verification email. Please try again later.");
+            }
 
         } catch (InterruptedException e) {
 
             Thread.currentThread().interrupt();
 
-            System.err.println(
-                    "RESEND ERROR: Email sending was interrupted");
+            System.err.println("Email sending was interrupted");
 
             throw new IllegalStateException(
-                    "Email sending was interrupted",
-                    e);
+                    "Unable to send verification email. Please try again later.");
+
+        } catch (IllegalStateException e) {
+
+            throw e;
 
         } catch (Exception e) {
 
             System.err.println(
-                    "RESEND ERROR: " + e.getMessage());
-
-            e.printStackTrace();
+                    "Email service error: "
+                            + e.getMessage());
 
             throw new IllegalStateException(
-                    "Failed to send email through Resend: "
-                            + e.getMessage(),
-                    e);
+                    "Unable to send verification email. Please try again later.");
         }
     }
 

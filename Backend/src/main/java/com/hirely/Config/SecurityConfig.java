@@ -79,7 +79,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.OPTIONS,"/**").permitAll()
 
                                 // PUBLIC AUTH
-                                .requestMatchers("/api/auth/**", "/api/test").permitAll()
+                                .requestMatchers("/api/auth/**", "/api/test", "/api/health/db").permitAll()
 
                                 // PUBLIC JOB SEARCH
                                 .requestMatchers(HttpMethod.GET,"/api/jobs").permitAll()

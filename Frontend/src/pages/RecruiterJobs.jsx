@@ -1,482 +1,167 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { motion } from "framer-motion";
 import api from "../services/api";
 import Icon from "../components/Icon";
 
 function RecruiterJobs() {
-
     const navigate = useNavigate();
-
-
-    // ==========================================
-    // STATE
-    // ==========================================
-
     const [jobs, setJobs] = useState([]);
-
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
-
     const [deletingId, setDeletingId] = useState(null);
 
-
-    // ==========================================
-    // LOAD MY JOBS
-    // ==========================================
-
     useEffect(() => {
-
         fetchJobs();
-
     }, []);
 
-
     const fetchJobs = async () => {
-
         setLoading(true);
-
         setError("");
-
         try {
-
-            /*
-             * We use /api/jobs here because your
-             * existing backend already provides
-             * GET /api/jobs.
-             *
-             * Later, if you want strict "my jobs"
-             * filtering on the backend, we can add it.
-             */
-
-            const response =
-                await api.get("/api/jobs/my");
-
+            const response = await api.get("/api/jobs/my");
             setJobs(response.data);
-
-        } catch (error) {
-
-            console.error(
-                "Error loading jobs:",
-                error
-            );
-
-            setError(
-                error.response?.data ||
-                "Unable to load jobs."
-            );
-
+        } catch (err) {
+            console.error("Error loading jobs:", err);
+            setError(err.response?.data || "Unable to load posted jobs.");
         } finally {
-
             setLoading(false);
         }
     };
 
-
-    // ==========================================
-    // DELETE JOB
-    // ==========================================
-
     const handleDelete = async (jobId) => {
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to delete this job?"
-            );
-
-
-        if (!confirmed) {
-
-            return;
-        }
-
+        if (!window.confirm("Are you sure you want to delete this job posting?")) return;
 
         setDeletingId(jobId);
-
         setError("");
-
-
         try {
-
-            await api.delete(
-                `/api/jobs/${jobId}`
-            );
-
-
-            // Remove deleted job from UI
-
-            setJobs((previousJobs) =>
-                previousJobs.filter(
-                    (job) =>
-                        job.id !== jobId
-                )
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Delete job error:",
-                error
-            );
-
-            setError(
-                error.response?.data ||
-                "Unable to delete the job."
-            );
-
+            await api.delete(`/api/jobs/${jobId}`);
+            setJobs((prev) => prev.filter((j) => j.id !== jobId));
+        } catch (err) {
+            console.error("Delete job error:", err);
+            setError(err.response?.data || "Unable to delete the job.");
         } finally {
-
             setDeletingId(null);
         }
     };
 
-
-    // ==========================================
-    // LOADING
-    // ==========================================
-
     if (loading) {
-
         return (
-
-            <div className="page-center">
-
-                <h2>
-                    Loading jobs...
-                </h2>
-
+            <div className="max-w-7xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Retrieving posted job listings...</p>
             </div>
         );
     }
 
-
     return (
-
-        <div>
-
-            {/* ======================================
-                NAVBAR
-            ====================================== */}
-
-            <nav className="navbar">
-
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                        <Icon name="briefcase" size={26} className="text-purple-600" />
+                        Manage Job Openings
+                    </h1>
+                    <p className="text-xs text-slate-500 mt-1">
+                        View active job listings, review applicant submissions, and create new roles.
+                    </p>
                 </div>
 
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate(
-                            "/recruiter/dashboard"
-                        )
-                    }
-                >
-                    <Icon name="left" /> Dashboard
-                </button>
-
-            </nav>
-
-
-            {/* ======================================
-                MAIN CONTENT
-            ====================================== */}
-
-            <main className="jobs-page">
-
-                {/* ==================================
-                    HEADER
-                ================================== */}
-
-                <div
-                    className="jobs-header"
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: "20px",
-                        flexWrap: "wrap"
-                    }}
-                >
-
-                    <div>
-
-                        <h1>
-                            <Icon name="briefcase" /> My Jobs
-                        </h1>
-
-                        <p>
-                            Create and manage your job postings.
-                        </p>
-
-                    </div>
-
-
+                <div className="flex items-center gap-3">
                     <button
-                        className="primary-button"
-                        onClick={() =>
-                            navigate(
-                                "/recruiter/jobs/create"
-                            )
-                        }
+                        onClick={() => navigate("/recruiter/jobs/create")}
+                        className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
                     >
-                        + Create New Job
+                        <Icon name="plus" size={15} />
+                        <span>Post New Job</span>
                     </button>
-
+                    <button
+                        onClick={() => navigate("/recruiter/dashboard")}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+                    >
+                        <Icon name="left" size={14} />
+                        <span>Dashboard</span>
+                    </button>
                 </div>
+            </div>
 
+            {error && (
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                    {error}
+                </div>
+            )}
 
-                {/* ==================================
-                    ERROR
-                ================================== */}
-
-                {error && (
-
-                    <div className="error-message">
-
-                        {error}
-
-                    </div>
-
-                )}
-
-
-                {/* ==================================
-                    NO JOBS
-                ================================== */}
-
-                {!error &&
-                    jobs.length === 0 && (
-
-                        <div className="empty-state">
-
-                            <h2>
-                                No jobs posted yet
-                            </h2>
-
-                            <p>
-                                Create your first job posting
-                                to start receiving applications.
-                            </p>
-
-
-                            <button
-                                className="primary-button"
-                                onClick={() =>
-                                    navigate(
-                                        "/recruiter/jobs/create"
-                                    )
-                                }
-                            >
-                                Create Your First Job
-                            </button>
-
-                        </div>
-                    )
-                }
-
-
-                {/* ==================================
-                    JOB LIST
-                ================================== */}
-
-                {jobs.length > 0 && (
-
-                    <div className="jobs-grid">
-
-                        {jobs.map((job) => (
-
-                            <div
-                                className="job-card"
-                                key={job.id}
-                            >
-
-                                {/* ==========================
-                                    JOB HEADER
-                                ========================== */}
-
-                                <div
-                                    className="job-card-header"
-                                >
-
-                                    <h2>
-                                        {job.title}
-                                    </h2>
-
-
-                                    <span
-                                        className="job-type"
-                                    >
-                                        {job.jobType}
+            {jobs.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 space-y-3">
+                    <Icon name="briefcase" size={40} className="mx-auto text-slate-300" />
+                    <h3 className="text-base font-bold text-slate-800">No Job Listings Posted</h3>
+                    <p className="text-xs text-slate-500">Create your company's first job opening to start attracting top talent.</p>
+                    <button
+                        onClick={() => navigate("/recruiter/jobs/create")}
+                        className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl"
+                    >
+                        Create First Job
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {jobs.map((job) => (
+                        <motion.div
+                            key={job.id}
+                            whileHover={{ y: -4 }}
+                            className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+                        >
+                            <div>
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg">
+                                        {job.company?.name ? job.company.name.charAt(0) : "C"}
+                                    </div>
+                                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100">
+                                        {job.jobType || "Full Time"}
                                     </span>
-
                                 </div>
 
-
-                                {/* ==========================
-                                    COMPANY
-                                ========================== */}
-
-                                <p className="company-name">
-
-                                    <Icon name="building" />{" "}
-
-                                    {job.company?.name ||
-                                        "Company"}
-
+                                <h3 className="text-base font-bold text-slate-900 line-clamp-1">{job.title}</h3>
+                                <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-1">
+                                    <Icon name="pin" size={13} className="text-slate-400" />
+                                    {job.location || "Remote"}
                                 </p>
 
-
-                                {/* ==========================
-                                    LOCATION
-                                ========================== */}
-
-                                <p className="job-location">
-
-                                    <Icon name="pin" />{" "}
-
-                                    {job.location}
-
+                                <p className="text-xs text-slate-600 mt-3 line-clamp-2 leading-relaxed">
+                                    {job.description}
                                 </p>
-
-
-                                {/* ==========================
-                                    EXPERIENCE
-                                ========================== */}
-
-                                {job.experience && (
-
-                                    <p>
-
-                                        <Icon name="briefcase" /> Experience:{" "}
-
-                                        {job.experience}
-
-                                    </p>
-
-                                )}
-
-
-                                {/* ==========================
-                                    SALARY
-                                ========================== */}
-
-                                {(job.salaryMin ||
-                                    job.salaryMax) && (
-
-                                        <p>
-
-                                            <Icon name="chart" /> Salary:{" "}
-
-                                            {job.salaryMin ||
-                                                0}
-
-                                            {" - "}
-
-                                            {job.salaryMax ||
-                                                "Negotiable"}
-
-                                        </p>
-
-                                    )}
-
-
-                                {/* ==========================
-                                    DESCRIPTION
-                                ========================== */}
-
-                                <p className="job-description">
-
-                                    {job.description &&
-                                        job.description.length > 150
-
-                                        ? job.description.substring(
-                                            0,
-                                            150
-                                        ) + "..."
-
-                                        : job.description}
-
-                                </p>
-
-
-                                {/* ==========================
-                                    ACTIONS
-                                ========================== */}
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "10px",
-                                        flexWrap: "wrap",
-                                        marginTop: "15px"
-                                    }}
-                                >
-
-                                    <button
-                                        className="primary-button"
-                                        onClick={() =>
-                                            navigate(
-                                                `/recruiter/jobs/edit/${job.id}`
-                                            )
-                                        }
-                                    >
-                                        <Icon name="edit" /> Edit
-                                    </button>
-
-
-                                    <button
-                                        className="secondary-button"
-                                        onClick={() =>
-                                            navigate(
-                                                `/recruiter/jobs/${job.id}/applicants`
-                                            )
-                                        }
-                                    >
-                                        <Icon name="users" /> Applicants
-                                    </button>
-
-
-                                    <button
-                                        className="clear-button"
-                                        disabled={
-                                            deletingId ===
-                                            job.id
-                                        }
-                                        onClick={() =>
-                                            handleDelete(
-                                                job.id
-                                            )
-                                        }
-                                    >
-
-                                        {deletingId === job.id
-                                            ? "Deleting..."
-                                            : <><Icon name="delete" /> Delete</>}
-
-                                    </button>
-
-                                </div>
-
                             </div>
 
-                        ))}
+                            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate(`/recruiter/jobs/${job.id}/applicants`)}
+                                    className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs text-center transition-colors flex items-center justify-center gap-1.5"
+                                >
+                                    <Icon name="users" size={14} />
+                                    <span>Applicants</span>
+                                </button>
 
-                    </div>
-                )}
+                                <button
+                                    onClick={() => navigate(`/recruiter/jobs/edit/${job.id}`)}
+                                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                                    title="Edit Job"
+                                >
+                                    <Icon name="edit" size={15} />
+                                </button>
 
-            </main>
-
+                                <button
+                                    onClick={() => handleDelete(job.id)}
+                                    disabled={deletingId === job.id}
+                                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition-colors disabled:opacity-50"
+                                    title="Delete Job"
+                                >
+                                    <Icon name="delete" size={15} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

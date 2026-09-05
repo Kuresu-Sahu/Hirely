@@ -1,1138 +1,131 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { motion } from "framer-motion";
 import api from "../services/api";
-
+import Icon from "../components/Icon";
 
 function ResumeAnalysisHistoryDetail() {
-
     const { analysisId } = useParams();
-
     const navigate = useNavigate();
 
-
-    // =========================================================
-    // STATE
-    // =========================================================
-
     const [analysis, setAnalysis] = useState(null);
-
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
 
-
-    // =========================================================
-    // LOAD ANALYSIS
-    // =========================================================
-
     useEffect(() => {
-
         const loadAnalysis = async () => {
-
             setLoading(true);
-
             setError("");
-
-
             try {
-
-                const response =
-                    await api.get(
-                        `/api/resume-analysis/${analysisId}`
-                    );
-
-
-                setAnalysis(
-                    response.data
-                );
-
-
-            } catch (error) {
-
-                console.error(
-                    "Error loading resume analysis:",
-                    error
-                );
-
-
-                const message =
-                    typeof error.response?.data === "string"
-
-                        ? error.response.data
-
-                        : error.response?.data?.message
-
-                        || "Unable to load this resume analysis.";
-
-
-                setError(message);
-
-
+                const response = await api.get(`/api/resume-analysis/${analysisId}`);
+                setAnalysis(response.data);
+            } catch (err) {
+                console.error("Error loading resume analysis:", err);
+                setError(err.response?.data?.message || err.response?.data || "Unable to load analysis.");
             } finally {
-
                 setLoading(false);
             }
         };
 
-
-        if (analysisId) {
-
-            loadAnalysis();
-
-        } else {
-
-            setError(
-                "Analysis ID is missing."
-            );
-
-            setLoading(false);
-        }
-
-
+        if (analysisId) loadAnalysis();
+        else setLoading(false);
     }, [analysisId]);
 
-
-    // =========================================================
-    // SCORE COLOR
-    // =========================================================
-
-    const getScoreColor = (score) => {
-
-        const numericScore =
-            Number(score || 0);
-
-
-        if (numericScore >= 85) {
-
-            return "#16a34a";
-        }
-
-
-        if (numericScore >= 70) {
-
-            return "#2563eb";
-        }
-
-
-        if (numericScore >= 50) {
-
-            return "#d97706";
-        }
-
-
-        return "#dc2626";
-    };
-
-
-    // =========================================================
-    // SCORE LABEL
-    // =========================================================
-
-    const getScoreLabel = (score) => {
-
-        const numericScore =
-            Number(score || 0);
-
-
-        if (numericScore >= 85) {
-
-            return "Excellent";
-        }
-
-
-        if (numericScore >= 70) {
-
-            return "Good";
-        }
-
-
-        if (numericScore >= 50) {
-
-            return "Moderate";
-        }
-
-
-        return "Needs Improvement";
-    };
-
-
-    // =========================================================
-    // SAFE ARRAY
-    // =========================================================
-
-    const safeArray = (value) => {
-
-        if (!Array.isArray(value)) {
-
-            return [];
-        }
-
-
-        return value.filter(
-            item =>
-                item !== null &&
-                item !== undefined &&
-                String(item).trim() !== ""
-        );
-    };
-
-
-    // =========================================================
-    // DATE
-    // =========================================================
-
-    const formatDate = (date) => {
-
-        if (!date) {
-
-            return "Date unavailable";
-        }
-
-
-        const parsedDate =
-            new Date(date);
-
-
-        if (
-            Number.isNaN(
-                parsedDate.getTime()
-            )
-        ) {
-
-            return "Date unavailable";
-        }
-
-
-        return parsedDate.toLocaleString(
-            undefined,
-            {
-                dateStyle: "medium",
-                timeStyle: "short"
-            }
-        );
-    };
-
-
-    // =========================================================
-    // LIST
-    // =========================================================
-
-    const renderList = (
-        items,
-        emptyMessage,
-        type = "normal"
-    ) => {
-
-        const safeItems =
-            safeArray(items);
-
-
-        if (
-            safeItems.length === 0
-        ) {
-
-            return (
-
-                <div
-                    style={{
-                        padding: "15px 0",
-                        color: "#6b7280",
-                        lineHeight: "1.6"
-                    }}
-                >
-                    {emptyMessage}
-                </div>
-            );
-        }
-
-
-        return (
-
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "11px",
-                    marginTop: "17px"
-                }}
-            >
-
-                {safeItems.map(
-                    (item, index) => (
-
-                        <div
-                            key={`${type}-${index}`}
-                            style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "11px",
-                                padding: "12px 14px",
-                                borderRadius: "10px",
-                                background:
-                                    type === "missing"
-                                        ? "#fff7ed"
-                                        : type === "strength"
-                                            ? "#f0fdf4"
-                                            : "#f8fafc"
-                            }}
-                        >
-
-                            <span
-                                style={{
-                                    flexShrink: 0,
-                                    fontSize: "16px"
-                                }}
-                            >
-
-                                {type === "missing"
-                                    ? "⚠️"
-                                    : type === "strength"
-                                        ? "✓"
-                                        : "•"}
-
-                            </span>
-
-
-                            <span
-                                style={{
-                                    color: "#374151",
-                                    lineHeight: "1.6"
-                                }}
-                            >
-                                {item}
-                            </span>
-
-                        </div>
-                    )
-                )}
-
-            </div>
-        );
-    };
-
-
-    // =========================================================
-    // LOADING
-    // =========================================================
+    const safeArray = (val) => (Array.isArray(val) ? val.filter((i) => i && String(i).trim()) : []);
 
     if (loading) {
-
         return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            fontSize: "45px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        📊
-                    </div>
-
-
-                    <h2>
-                        Loading Analysis...
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280"
-                        }}
-                    >
-                        Retrieving your saved resume analysis.
-                    </p>
-
-                </div>
-
+            <div className="max-w-4xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Retrieving saved analysis report...</p>
             </div>
         );
     }
 
-
-    // =========================================================
-    // ERROR / NOT FOUND
-    // =========================================================
-
-    if (!analysis) {
-
+    if (error || !analysis) {
         return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh",
-                    padding: "30px"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center",
-                        maxWidth: "500px"
-                    }}
+            <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center">
+                <Icon name="warning" size={36} className="mx-auto text-rose-500 mb-3" />
+                <h2 className="text-lg font-bold text-slate-900">{error || "Analysis not found"}</h2>
+                <button
+                    onClick={() => navigate("/resume-analysis/history")}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl"
                 >
-
-                    <div
-                        style={{
-                            fontSize: "50px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        ⚠️
-                    </div>
-
-
-                    <h2>
-                        Unable to Load Analysis
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            lineHeight: "1.6"
-                        }}
-                    >
-                        {error ||
-                            "This analysis could not be found."}
-                    </p>
-
-
-                    <button
-                        className="primary-button"
-                        onClick={() =>
-                            navigate(
-                                "/resume-analysis/history"
-                            )
-                        }
-                    >
-                        ← Back to History
-                    </button>
-
-                </div>
-
+                    Back to History
+                </button>
             </div>
         );
     }
 
-
-    // =========================================================
-    // VALUES
-    // =========================================================
-
-    const score =
-        Number(
-            analysis.atsScore || 0
-        );
-
-
-    const matchedKeywords =
-        safeArray(
-            analysis.matchedKeywords
-        );
-
-
-    const missingKeywords =
-        safeArray(
-            analysis.missingKeywords
-        );
-
-
-    const strengths =
-        safeArray(
-            analysis.strengths
-        );
-
-
-    const suggestions =
-        safeArray(
-            analysis.suggestions
-        );
-
-
-    const totalKeywords =
-        matchedKeywords.length +
-        missingKeywords.length;
-
-
-    const keywordCoverage =
-        totalKeywords > 0
-
-            ? Math.round(
-                (
-                    matchedKeywords.length /
-                    totalKeywords
-                ) * 100
-            )
-
-            : 0;
-
-
-    // =========================================================
-    // MAIN
-    // =========================================================
+    const score = Number(analysis.atsScore || 0);
 
     return (
-
-        <div
-            style={{
-                minHeight: "100vh",
-                background: "#f8fafc"
-            }}
-        >
-
-            {/* =================================================
-                NAVBAR
-            ================================================= */}
-
-            <nav
-                className="navbar"
-                style={{
-                    background: "white",
-                    borderBottom:
-                        "1px solid #e5e7eb"
-                }}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <button
+                onClick={() => navigate("/resume-analysis/history")}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
             >
+                <Icon name="left" size={14} />
+                <span>Back to Analysis History</span>
+            </button>
 
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
-                </div>
-
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate(
-                            "/resume-analysis/history"
-                        )
-                    }
-                >
-                    ← Analysis History
-                </button>
-
-            </nav>
-
-
-            {/* =================================================
-                CONTENT
-            ================================================= */}
-
-            <main
-                style={{
-                    maxWidth: "1100px",
-                    margin: "0 auto",
-                    padding:
-                        "35px 20px 60px"
-                }}
-            >
-
-                {/* =================================================
-                    HEADER
-                ================================================= */}
-
-                <div
-                    style={{
-                        marginBottom: "25px"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "7px 12px",
-                            borderRadius: "999px",
-                            background: "#eef2ff",
-                            color: "#4338ca",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            marginBottom: "12px"
-                        }}
-                    >
-                        📊 Saved Analysis
-                    </div>
-
-
-                    <h1
-                        style={{
-                            marginBottom: "9px"
-                        }}
-                    >
-                        {analysis.jobTitle ||
-                            "Resume Analysis"}
-                    </h1>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            margin: 0
-                        }}
-                    >
-                        Analyzed on{" "}
-                        {formatDate(
-                            analysis.analyzedAt
-                        )}
-                    </p>
-
-                </div>
-
-
-                {/* =================================================
-                    SCORE + KEYWORD SUMMARY
-                ================================================= */}
-
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                            "minmax(260px, 1fr) minmax(320px, 1.5fr)",
-                        gap: "22px",
-                        marginBottom: "22px"
-                    }}
-                >
-
-                    {/* SCORE */}
-
-                    <div
-                        style={{
-                            background: "white",
-                            padding: "30px",
-                            borderRadius: "16px",
-                            border:
-                                "1px solid #e5e7eb",
-                            boxShadow:
-                                "0 4px 18px rgba(0,0,0,0.04)",
-                            textAlign: "center"
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                color: "#6b7280",
-                                fontSize: "13px",
-                                fontWeight: "700",
-                                letterSpacing: "0.5px"
-                            }}
-                        >
-                            ATS SCORE
-                        </div>
-
-
-                        <div
-                            style={{
-                                fontSize: "72px",
-                                fontWeight: "800",
-                                lineHeight: "1",
-                                color:
-                                    getScoreColor(
-                                        score
-                                    ),
-                                margin:
-                                    "18px 0 8px"
-                            }}
-                        >
-                            {score}
-                        </div>
-
-
-                        <div
-                            style={{
-                                color: "#6b7280"
-                            }}
-                        >
-                            out of 100
-                        </div>
-
-
-                        <div
-                            style={{
-                                display: "inline-block",
-                                marginTop: "15px",
-                                padding:
-                                    "7px 14px",
-                                borderRadius:
-                                    "999px",
-                                background:
-                                    `${getScoreColor(
-                                        score
-                                    )}15`,
-                                color:
-                                    getScoreColor(
-                                        score
-                                    ),
-                                fontWeight: "700"
-                            }}
-                        >
-                            {getScoreLabel(
-                                score
-                            )}
-                        </div>
-
-                    </div>
-
-
-                    {/* KEYWORD SUMMARY */}
-
-                    <div
-                        style={{
-                            background: "white",
-                            padding: "30px",
-                            borderRadius: "16px",
-                            border:
-                                "1px solid #e5e7eb",
-                            boxShadow:
-                                "0 4px 18px rgba(0,0,0,0.04)"
-                        }}
-                    >
-
-                        <h2
-                            style={{
-                                marginTop: 0
-                            }}
-                        >
-                            📊 Keyword Match
-                        </h2>
-
-
-                        <p
-                            style={{
-                                color: "#6b7280",
-                                lineHeight: "1.6"
-                            }}
-                        >
-                            This shows how many detected
-                            job-relevant keywords were found
-                            in the saved resume analysis.
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                    <div>
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            Saved ATS Scan Report
+                        </span>
+                        <h1 className="text-2xl font-black text-slate-900 mt-2">{analysis.jobTitle || "Job Analysis Report"}</h1>
+                        <p className="text-xs text-slate-400 mt-1">
+                            Analyzed on {analysis.analyzedAt ? new Date(analysis.analyzedAt).toLocaleString() : "Date N/A"}
                         </p>
-
-
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent:
-                                    "space-between",
-                                marginBottom: "8px"
-                            }}
-                        >
-
-                            <strong>
-                                Keyword Coverage
-                            </strong>
-
-
-                            <strong
-                                style={{
-                                    color: "#2563eb"
-                                }}
-                            >
-                                {keywordCoverage}%
-                            </strong>
-
-                        </div>
-
-
-                        <div
-                            style={{
-                                height: "10px",
-                                background: "#e5e7eb",
-                                borderRadius: "999px",
-                                overflow: "hidden"
-                            }}
-                        >
-
-                            <div
-                                style={{
-                                    width:
-                                        `${keywordCoverage}%`,
-                                    height: "100%",
-                                    background: "#2563eb",
-                                    borderRadius: "999px"
-                                }}
-                            />
-
-                        </div>
-
-
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(3, 1fr)",
-                                gap: "12px",
-                                marginTop: "24px"
-                            }}
-                        >
-
-                            <div
-                                style={{
-                                    background: "#f0fdf4",
-                                    padding: "15px",
-                                    borderRadius: "11px"
-                                }}
-                            >
-
-                                <div
-                                    style={{
-                                        fontSize: "25px",
-                                        fontWeight: "800",
-                                        color: "#16a34a"
-                                    }}
-                                >
-                                    {matchedKeywords.length}
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "#166534"
-                                    }}
-                                >
-                                    Matched
-                                </div>
-
-                            </div>
-
-
-                            <div
-                                style={{
-                                    background: "#fff7ed",
-                                    padding: "15px",
-                                    borderRadius: "11px"
-                                }}
-                            >
-
-                                <div
-                                    style={{
-                                        fontSize: "25px",
-                                        fontWeight: "800",
-                                        color: "#ea580c"
-                                    }}
-                                >
-                                    {missingKeywords.length}
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "#9a3412"
-                                    }}
-                                >
-                                    Missing
-                                </div>
-
-                            </div>
-
-
-                            <div
-                                style={{
-                                    background: "#f8fafc",
-                                    padding: "15px",
-                                    borderRadius: "11px"
-                                }}
-                            >
-
-                                <div
-                                    style={{
-                                        fontSize: "25px",
-                                        fontWeight: "800",
-                                        color: "#475569"
-                                    }}
-                                >
-                                    {totalKeywords}
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "#475569"
-                                    }}
-                                >
-                                    Total
-                                </div>
-
-                            </div>
-
-                        </div>
-
                     </div>
 
+                    <div className="text-center bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[100px]">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">ATS Score</span>
+                        <span className="text-3xl font-black text-blue-600">{score}%</span>
+                    </div>
                 </div>
 
-
-                {/* =================================================
-                    MATCHED / MISSING KEYWORDS
-                ================================================= */}
-
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                            "repeat(auto-fit, minmax(300px, 1fr))",
-                        gap: "22px",
-                        marginBottom: "22px"
-                    }}
-                >
-
-                    {/* MATCHED */}
-
-                    <div
-                        style={{
-                            background: "white",
-                            padding: "30px",
-                            borderRadius: "16px",
-                            border:
-                                "1px solid #e5e7eb",
-                            boxShadow:
-                                "0 4px 18px rgba(0,0,0,0.04)"
-                        }}
-                    >
-
-                        <h2
-                            style={{
-                                marginTop: 0
-                            }}
-                        >
-                            ✅ Matched Keywords
-                        </h2>
-
-
-                        <p
-                            style={{
-                                color: "#6b7280",
-                                lineHeight: "1.6"
-                            }}
-                        >
-                            Keywords detected in your resume
-                            that matched the job requirements.
-                        </p>
-
-
-                        {renderList(
-                            matchedKeywords,
-                            "No matched keywords were recorded.",
-                            "strength"
-                        )}
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-extrabold uppercase text-emerald-700">Matched Skills</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {safeArray(analysis.matchedSkills).map((s, idx) => (
+                                <span key={idx} className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                                    ✓ {s}
+                                </span>
+                            ))}
+                        </div>
                     </div>
 
-
-                    {/* MISSING */}
-
-                    <div
-                        style={{
-                            background: "white",
-                            padding: "30px",
-                            borderRadius: "16px",
-                            border:
-                                "1px solid #e5e7eb",
-                            boxShadow:
-                                "0 4px 18px rgba(0,0,0,0.04)"
-                        }}
-                    >
-
-                        <h2
-                            style={{
-                                marginTop: 0
-                            }}
-                        >
-                            ⚠️ Missing Keywords
-                        </h2>
-
-
-                        <p
-                            style={{
-                                color: "#6b7280",
-                                lineHeight: "1.6"
-                            }}
-                        >
-                            Job-related keywords that were not
-                            detected in the saved analysis.
-                        </p>
-
-
-                        {renderList(
-                            missingKeywords,
-                            "No missing keywords were recorded.",
-                            "missing"
-                        )}
-
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-extrabold uppercase text-amber-700">Missing Skills</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {safeArray(analysis.missingSkills).map((s, idx) => (
+                                <span key={idx} className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                                    + {s}
+                                </span>
+                            ))}
+                        </div>
                     </div>
-
                 </div>
 
-
-                {/* =================================================
-                    STRENGTHS
-                ================================================= */}
-
-                <div
-                    style={{
-                        background: "white",
-                        padding: "30px",
-                        borderRadius: "16px",
-                        marginBottom: "22px",
-                        border:
-                            "1px solid #e5e7eb",
-                        boxShadow:
-                            "0 4px 18px rgba(0,0,0,0.04)"
-                    }}
-                >
-
-                    <h2
-                        style={{
-                            marginTop: 0
-                        }}
-                    >
-                        💪 Strengths
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            lineHeight: "1.6"
-                        }}
-                    >
-                        Positive aspects identified during
-                        the original analysis.
-                    </p>
-
-
-                    {renderList(
-                        strengths,
-                        "No strengths were recorded.",
-                        "strength"
-                    )}
-
-                </div>
-
-
-                {/* =================================================
-                    SUGGESTIONS
-                ================================================= */}
-
-                <div
-                    style={{
-                        background: "white",
-                        padding: "30px",
-                        borderRadius: "16px",
-                        marginBottom: "25px",
-                        border:
-                            "1px solid #e5e7eb",
-                        boxShadow:
-                            "0 4px 18px rgba(0,0,0,0.04)"
-                    }}
-                >
-
-                    <h2
-                        style={{
-                            marginTop: 0
-                        }}
-                    >
-                        💡 Suggestions
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            lineHeight: "1.6"
-                        }}
-                    >
-                        Recommendations saved from the original
-                        resume analysis.
-                    </p>
-
-
-                    {renderList(
-                        suggestions,
-                        "No suggestions were recorded."
-                    )}
-
-                </div>
-
-
-                {/* =================================================
-                    ACTIONS
-                ================================================= */}
-
-                <div
-                    style={{
-                        display: "flex",
-                        gap: "12px",
-                        flexWrap: "wrap"
-                    }}
-                >
-
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate(
-                                "/resume-analysis/history"
-                            )
-                        }
-                    >
-                        ← Analysis History
-                    </button>
-
-
-                    {analysis.jobId && (
-
-                        <button
-                            className="primary-button"
-                            onClick={() =>
-                                navigate(
-                                    `/resume-analysis/${analysis.jobId}`
-                                )
-                            }
-                        >
-                            🔄 Analyze Again
-                        </button>
-                    )}
-
-
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate("/jobs")
-                        }
-                    >
-                        🔎 Find Jobs
-                    </button>
-
-                </div>
-
-            </main>
-
+                {safeArray(analysis.improvementTips || analysis.suggestions).length > 0 && (
+                    <div className="pt-4 border-t border-slate-100 space-y-3">
+                        <h3 className="text-xs font-extrabold uppercase text-slate-700">AI Recommendations</h3>
+                        <div className="space-y-2">
+                            {safeArray(analysis.improvementTips || analysis.suggestions).map((tip, idx) => (
+                                <p key={idx} className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    • {tip}
+                                </p>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </motion.div>
         </div>
     );
 }
-
 
 export default ResumeAnalysisHistoryDetail;

@@ -1,775 +1,201 @@
-import {
-    useEffect,
-    useRef,
-    useState
-} from "react";
-
-import {
-    useNavigate,
-    useParams
-} from "react-router-dom";
-
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import api from "../services/api";
 import Icon from "../components/Icon";
 
-
 function ApplyJob() {
-
     const { id } = useParams();
-
     const navigate = useNavigate();
 
+    const [job, setJob] = useState(null);
+    const [coverLetter, setCoverLetter] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
-    // =========================================================
-    // STATE
-    // =========================================================
-
-    const [job, setJob] =
-        useState(null);
-
-    const [coverLetter, setCoverLetter] =
-        useState("");
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [submitting, setSubmitting] =
-        useState(false);
-
-    const [error, setError] =
-        useState("");
-
-    const [success, setSuccess] =
-        useState("");
-
-
-    // =========================================================
-    // SUBMIT LOCK
-    // =========================================================
-    // Prevents accidental double-clicks before React finishes
-    // updating the submitting state.
-    // =========================================================
-
-    const submitLock =
-        useRef(false);
-
-
-    // =========================================================
-    // LOAD JOB
-    // =========================================================
+    const submitLock = useRef(false);
 
     useEffect(() => {
-
         const fetchJob = async () => {
-
             setLoading(true);
-
             setError("");
-
-
             try {
-
-                const response =
-                    await api.get(
-                        `/api/jobs/${id}`
-                    );
-
-
-                setJob(
-                    response.data
-                );
-
-
-            } catch (error) {
-
-                console.error(
-                    "Error loading job:",
-                    error
-                );
-
-
-                const message =
-                    typeof error.response?.data ===
-                        "string"
-
-                        ? error.response.data
-
-                        : error.response?.data?.message
-
-                        || "Unable to load job details.";
-
-
-                setError(
-                    message
-                );
-
-
+                const response = await api.get(`/api/jobs/${id}`);
+                setJob(response.data);
+            } catch (err) {
+                console.error("Error loading job:", err);
+                setError(err.response?.data || "Unable to load job details.");
             } finally {
-
                 setLoading(false);
             }
         };
 
-
-        if (id) {
-
-            fetchJob();
-
-        } else {
-
-            setError(
-                "Invalid job ID."
-            );
-
-            setLoading(false);
-        }
-
-
+        if (id) fetchJob();
+        else setLoading(false);
     }, [id]);
 
-
-    // =========================================================
-    // COVER LETTER CHANGE
-    // =========================================================
-
-    const handleCoverLetterChange = (
-        event
-    ) => {
-
-        setCoverLetter(
-            event.target.value
-        );
-
-
-        if (error) {
-
-            setError("");
-        }
-
-
-        if (success) {
-
-            setSuccess("");
-        }
-    };
-
-
-    // =========================================================
-    // SUBMIT APPLICATION
-    // =========================================================
-
-    const handleSubmit = async (
-        event
-    ) => {
-
-        event.preventDefault();
-
-
-        // -----------------------------------------------------
-        // PREVENT DOUBLE SUBMIT
-        // -----------------------------------------------------
-
-        if (
-            submitLock.current ||
-            submitting
-        ) {
-
-            return;
-        }
-
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (submitLock.current || submitting) return;
 
         setError("");
-
         setSuccess("");
+        const trimmed = coverLetter.trim();
 
-
-        // -----------------------------------------------------
-        // COVER LETTER VALIDATION
-        // -----------------------------------------------------
-
-        const trimmedCoverLetter =
-            coverLetter.trim();
-
-
-        if (!trimmedCoverLetter) {
-
-            setError(
-                "Please write a cover letter before applying."
-            );
-
+        if (trimmed.length < 20) {
+            setError(`Your cover letter must contain at least 20 characters (currently ${trimmed.length}).`);
             return;
         }
-
-
-        if (
-            trimmedCoverLetter.length < 20
-        ) {
-
-            setError(
-                `Your cover letter must contain at least 20 characters. You currently have ${trimmedCoverLetter.length} characters.`
-            );
-
-            return;
-        }
-
-
-        if (
-            trimmedCoverLetter.length > 5000
-        ) {
-
-            setError(
-                "Your cover letter cannot exceed 5000 characters."
-            );
-
-            return;
-        }
-
-
-        // -----------------------------------------------------
-        // LOCK SUBMISSION
-        // -----------------------------------------------------
 
         submitLock.current = true;
-
         setSubmitting(true);
 
-
         try {
-
-            const response =
-                await api.post(
-                    "/api/applications",
-                    {
-                        jobId:
-                            Number(id),
-
-                        coverLetter:
-                            trimmedCoverLetter
-                    }
-                );
-
-
-            console.log(
-                "Application submitted:",
-                response.data
-            );
-
-
-            setSuccess(
-                "Application submitted successfully!"
-            );
-
-
+            await api.post("/api/applications", {
+                jobId: Number(id),
+                coverLetter: trimmed
+            });
+            setSuccess("Application submitted successfully!");
             setCoverLetter("");
-
-
-        } catch (error) {
-
-            console.error(
-                "Application error:",
-                error
-            );
-
-
-            let message =
-                "Unable to submit application.";
-
-
-            // -------------------------------------------------
-            // DUPLICATE APPLICATION
-            // -------------------------------------------------
-
-            if (
-                error.response?.status === 409
-            ) {
-
-                message =
-                    "You have already applied for this job.";
-
+        } catch (err) {
+            console.error("Application submission error:", err);
+            if (err.response?.status === 409) {
+                setError("You have already applied for this job.");
+            } else {
+                setError(err.response?.data?.message || err.response?.data || "Unable to submit application.");
             }
-
-            // -------------------------------------------------
-            // VALIDATION ERROR
-            // -------------------------------------------------
-
-            else if (
-                error.response?.status === 400
-            ) {
-
-                const responseData =
-                    error.response.data;
-
-
-                if (
-                    typeof responseData ===
-                    "string"
-                ) {
-
-                    message =
-                        responseData;
-
-                } else if (
-                    responseData?.message
-                ) {
-
-                    message =
-                        responseData.message;
-
-                } else {
-
-                    message =
-                        "Please check your application details and try again.";
-                }
-
-            }
-
-            // -------------------------------------------------
-            // OTHER SERVER ERROR
-            // -------------------------------------------------
-
-            else if (
-                error.response?.data?.message
-            ) {
-
-                message =
-                    error.response.data.message;
-
-            }
-
-
-            setError(
-                message
-            );
-
-
         } finally {
-
             submitLock.current = false;
-
             setSubmitting(false);
         }
     };
 
-
-    // =========================================================
-    // CHARACTER COUNT
-    // =========================================================
-
-    const characterCount =
-        coverLetter.trim().length;
-
-
-    const characterCountColor =
-        characterCount < 20
-            ? "#dc2626"
-            : characterCount > 5000
-                ? "#dc2626"
-                : "#16a34a";
-
-
-    // =========================================================
-    // LOADING
-    // =========================================================
+    const characterCount = coverLetter.trim().length;
 
     if (loading) {
-
         return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            fontSize: "40px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        <Icon name="briefcase" />
-                    </div>
-
-
-                    <h2>
-                        Loading job...
-                    </h2>
-
-                </div>
-
+            <div className="max-w-xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Loading job details...</p>
             </div>
         );
     }
-
-
-    // =========================================================
-    // JOB LOAD ERROR
-    // =========================================================
-
-    if (
-        error &&
-        !job
-    ) {
-
-        return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh",
-                    padding: "30px"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center",
-                        maxWidth: "500px"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            fontSize: "50px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        <Icon name="warning" />
-                    </div>
-
-
-                    <h2>
-                        Unable to Load Job
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            lineHeight: "1.6"
-                        }}
-                    >
-                        {error}
-                    </p>
-
-
-                    <button
-                        className="primary-button"
-                        onClick={() =>
-                            navigate("/jobs")
-                        }
-                    >
-                        Back to Jobs
-                    </button>
-
-                </div>
-
-            </div>
-        );
-    }
-
-
-    // =========================================================
-    // PAGE
-    // =========================================================
 
     return (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <button
+                onClick={() => navigate(`/jobs/${id}`)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
+            >
+                <Icon name="left" size={14} />
+                <span>Back to Job Specifications</span>
+            </button>
 
-        <div>
-
-            {/* =================================================
-                NAVBAR
-            ================================================= */}
-
-            <nav className="navbar">
-
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
+            <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-sm space-y-6"
+            >
+                {/* HEADER */}
+                <div className="border-b border-slate-100 pb-6">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                        Job Application
+                    </span>
+                    <h1 className="text-2xl font-black text-slate-900 mt-2">{job?.title}</h1>
+                    <p className="text-xs font-semibold text-slate-500 mt-1 flex items-center gap-2">
+                        <span><Icon name="building" size={14} /> {job?.company?.name || "Hirely Client"}</span>
+                        <span>•</span>
+                        <span><Icon name="pin" size={14} /> {job?.location || "Remote"}</span>
+                    </p>
                 </div>
 
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate(
-                            `/jobs/${id}`
-                        )
-                    }
-                    disabled={submitting}
-                >
-                    <Icon name="left" /> Back to Job
-                </button>
-
-            </nav>
-
-
-            {/* =================================================
-                MAIN
-            ================================================= */}
-
-            <main className="apply-page">
-
-                <div className="apply-card">
-
-                    {/* =========================================
-                        JOB INFORMATION
-                    ========================================= */}
-
-                    <div
-                        className="apply-job-header"
-                    >
-
-                        <h1>
-                            Apply for this Job
-                        </h1>
-
-
-                        <h2>
-                            {job?.title}
-                        </h2>
-
-
-                        <p>
-                            <Icon name="building" />{" "}
-                            {job?.company?.name ||
-                                "Company"}
-                        </p>
-
-
-                        <p>
-                            <Icon name="pin" />{" "}
-                            {job?.location ||
-                                "Location not specified"}
-                        </p>
-
+                {error && (
+                    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                        <Icon name="warning" size={16} />
+                        <span>{error}</span>
                     </div>
+                )}
 
-
-                    {/* =========================================
-                        ERROR
-                    ========================================= */}
-
-                    {error && (
-
-                        <div
-                            className="error-message"
-                            role="alert"
-                        >
-                            {error}
+                {success ? (
+                    <div className="p-8 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4">
+                        <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto text-xl font-bold shadow-md">
+                            ✓
                         </div>
-                    )}
+                        <h2 className="text-xl font-black text-emerald-900">Application Submitted!</h2>
+                        <p className="text-xs text-emerald-700 max-w-md mx-auto">
+                            The hiring team and AI screening systems have received your application.
+                        </p>
 
-
-                    {/* =========================================
-                        SUCCESS
-                    ========================================= */}
-
-                    {success && (
-
-                        <div
-                            className="success-message"
-                            role="status"
-                        >
-
-                            <h3>
-                                <Icon name="check" /> Application Submitted
-                            </h3>
-
-
-                            <p>
-                                {success}
-                            </p>
-
-
-                            <div
-                                className="application-success-actions"
+                        <div className="flex justify-center gap-3 pt-2">
+                            <button
+                                onClick={() => navigate("/my-applications")}
+                                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
                             >
-
-                                <button
-                                    className="primary-button"
-                                    onClick={() =>
-                                        navigate(
-                                            "/my-applications"
-                                        )
-                                    }
-                                >
-                                    View My Applications
-                                </button>
-
-
-                                <button
-                                    className="secondary-button"
-                                    onClick={() =>
-                                        navigate(
-                                            `/jobs/${id}`
-                                        )
-                                    }
-                                >
-                                    Back to Job
-                                </button>
-
-                            </div>
-
+                                Track Applications
+                            </button>
+                            <button
+                                onClick={() => navigate("/jobs")}
+                                className="px-5 py-2.5 bg-white border border-emerald-300 text-emerald-800 font-bold text-xs rounded-xl hover:bg-emerald-100/50"
+                            >
+                                Explore More Jobs
+                            </button>
                         </div>
-                    )}
-
-
-                    {/* =========================================
-                        APPLICATION FORM
-                    ========================================= */}
-
-                    {!success && (
-
-                        <form
-                            onSubmit={
-                                handleSubmit
-                            }
-                            className="application-form"
-                        >
-
-                            <div className="form-group">
-
-                                <label
-                                    htmlFor="coverLetter"
-                                >
-                                    Cover Letter
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-extrabold uppercase text-slate-700">
+                                    Cover Letter / Pitch
                                 </label>
-
-
-                                <textarea
-                                    id="coverLetter"
-                                    rows="10"
-                                    placeholder="Write a short cover letter explaining why you are a good fit for this position..."
-                                    value={
-                                        coverLetter
-                                    }
-                                    onChange={
-                                        handleCoverLetterChange
-                                    }
-                                    disabled={
-                                        submitting
-                                    }
-                                    required
-                                    minLength={20}
-                                    maxLength={5000}
-                                />
-
-
-                                {/* =================================
-                                    CHARACTER COUNT
-                                ================================= */}
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent:
-                                            "space-between",
-                                        marginTop: "7px",
-                                        fontSize: "13px"
-                                    }}
-                                >
-
-                                    <span
-                                        style={{
-                                            color:
-                                                characterCount < 20
-                                                    ? "#dc2626"
-                                                    : "#6b7280"
-                                        }}
-                                    >
-
-                                        {characterCount < 20
-
-                                            ? `At least ${20 - characterCount} more characters required`
-
-                                            : "Minimum requirement satisfied"}
-
-                                    </span>
-
-
-                                    <span
-                                        style={{
-                                            color:
-                                                characterCountColor,
-                                            fontWeight: "600"
-                                        }}
-                                    >
-                                        {characterCount}/5000
-                                    </span>
-
-                                </div>
-
+                                <span className={`text-xs font-bold ${characterCount < 20 ? "text-rose-600" : "text-emerald-600"}`}>
+                                    {characterCount}/5000 chars
+                                </span>
                             </div>
 
+                            <textarea
+                                rows={8}
+                                placeholder="Explain why your background, technical skills, and experience make you an ideal candidate for this role..."
+                                value={coverLetter}
+                                onChange={(e) => setCoverLetter(e.target.value)}
+                                disabled={submitting}
+                                required
+                                minLength={20}
+                                maxLength={5000}
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+                            />
+                            {characterCount < 20 && (
+                                <p className="text-[11px] font-semibold text-rose-600 mt-1">
+                                    At least 20 characters required. ({20 - characterCount} more needed)
+                                </p>
+                            )}
+                        </div>
 
-                            {/* =========================================
-                                FORM ACTIONS
-                            ========================================= */}
-
-                            <div
-                                className="form-actions"
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/jobs/${id}`)}
+                                disabled={submitting}
+                                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
                             >
+                                Cancel
+                            </button>
 
-                                <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() =>
-                                        navigate(
-                                            `/jobs/${id}`
-                                        )
-                                    }
-                                    disabled={
-                                        submitting
-                                    }
-                                >
-                                    Cancel
-                                </button>
-
-
-                                <button
-                                    type="submit"
-                                    className="primary-button"
-                                    disabled={
-                                        submitting ||
-                                        characterCount < 20 ||
-                                        characterCount > 5000
-                                    }
-                                >
-
-                                    {submitting
-
-                                        ? "Submitting..."
-
-                                        : "Submit Application"}
-
-                                </button>
-
-                            </div>
-
-                        </form>
-                    )}
-
-                </div>
-
-            </main>
-
+                            <button
+                                type="submit"
+                                disabled={submitting || characterCount < 20}
+                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all"
+                            >
+                                {submitting ? "Submitting..." : "Submit Application"}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </motion.div>
         </div>
     );
 }
-
 
 export default ApplyJob;

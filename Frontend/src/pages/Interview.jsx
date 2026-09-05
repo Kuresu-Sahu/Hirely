@@ -1,1697 +1,277 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { motion } from "framer-motion";
 import api from "../services/api";
 import Icon from "../components/Icon";
 
 function Interview() {
-
     const { jobId } = useParams();
-
     const navigate = useNavigate();
 
-
-    // =====================================================
-    // STATE
-    // =====================================================
-
     const [questions, setQuestions] = useState([]);
-
     const [loading, setLoading] = useState(true);
-
     const [submitting, setSubmitting] = useState(false);
-
     const [error, setError] = useState("");
-
     const [currentQuestion, setCurrentQuestion] = useState(0);
-
     const [answers, setAnswers] = useState({});
-
     const [interviewStarted, setInterviewStarted] = useState(false);
-
     const [evaluationProgress, setEvaluationProgress] = useState(0);
 
-
-    // =====================================================
-    // LOAD QUESTIONS
-    // =====================================================
-
     useEffect(() => {
-
         const loadInterview = async () => {
-
             try {
-
                 setLoading(true);
-
                 setError("");
-
-
-                const response = await api.get(
-                    `/api/interview/job/${jobId}`
-                );
-
-
-                console.log(
-                    "Interview questions:",
-                    response.data
-                );
-
-
-                if (Array.isArray(response.data)) {
-
-                    setQuestions(
-                        response.data
-                    );
-
-                } else if (
-                    response.data &&
-                    Array.isArray(
-                        response.data.questions
-                    )
-                ) {
-
-                    setQuestions(
-                        response.data.questions
-                    );
-
-                } else {
-
-                    setQuestions([]);
-                }
-
-
-            } catch (error) {
-
-                console.error(
-                    "Interview loading error:",
-                    error
-                );
-
-
-                let message =
-                    "Unable to load interview questions.";
-
-
-                if (
-                    typeof error.response?.data ===
-                    "string"
-                ) {
-
-                    message =
-                        error.response.data;
-
-                } else if (
-                    error.response?.data?.message
-                ) {
-
-                    message =
-                        error.response.data.message;
-                }
-
-
-                setError(message);
-
-
+                const response = await api.get(`/api/interview/job/${jobId}`);
+                const qList = Array.isArray(response.data)
+                    ? response.data
+                    : response.data?.questions || [];
+                setQuestions(qList);
+            } catch (err) {
+                console.error("Interview loading error:", err);
+                setError(err.response?.data?.message || err.response?.data || "Unable to load interview questions.");
             } finally {
-
                 setLoading(false);
             }
         };
 
-
-        if (jobId) {
-
-            loadInterview();
-        }
-
+        if (jobId) loadInterview();
     }, [jobId]);
 
-
-    // =====================================================
-    // HANDLE ANSWER
-    // =====================================================
-
-    const handleAnswerChange = (value) => {
-
-        setAnswers(
-            (previousAnswers) => ({
-
-                ...previousAnswers,
-
-                [currentQuestion]: value
-
-            })
-        );
-
-
+    const handleAnswerChange = (val) => {
+        setAnswers((prev) => ({ ...prev, [currentQuestion]: val }));
         setError("");
     };
-
-
-    // =====================================================
-    // START INTERVIEW
-    // =====================================================
-
-    const handleStartInterview = () => {
-
-        setInterviewStarted(true);
-
-        setCurrentQuestion(0);
-
-        setError("");
-
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    };
-
-
-    // =====================================================
-    // NEXT QUESTION
-    // =====================================================
 
     const handleNext = () => {
-
-        const currentAnswer =
-            answers[currentQuestion] || "";
-
-
-        if (!currentAnswer.trim()) {
-
-            setError(
-                "Please answer this question before continuing."
-            );
-
+        const currentAnswer = answers[currentQuestion] || "";
+        if (!currentAnswer.trim() || currentAnswer.trim().length < 10) {
+            setError("Please provide a detailed answer (at least 10 characters).");
             return;
         }
-
-
-        if (currentAnswer.trim().length < 10) {
-
-            setError(
-                "Please provide a little more detail in your answer."
-            );
-
-            return;
-        }
-
-
         setError("");
-
-
-        if (
-            currentQuestion <
-            questions.length - 1
-        ) {
-
-            setCurrentQuestion(
-                currentQuestion + 1
-            );
-
-
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-            });
+        if (currentQuestion < questions.length - 1) {
+            setCurrentQuestion(currentQuestion + 1);
         }
     };
-
-
-    // =====================================================
-    // PREVIOUS QUESTION
-    // =====================================================
 
     const handlePrevious = () => {
-
         setError("");
-
-
-        if (currentQuestion > 0) {
-
-            setCurrentQuestion(
-                currentQuestion - 1
-            );
-
-
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-            });
-        }
+        if (currentQuestion > 0) setCurrentQuestion(currentQuestion - 1);
     };
-
-
-    // =====================================================
-    // GO TO QUESTION
-    // =====================================================
-
-    const handleQuestionNavigation = (index) => {
-
-        if (submitting) {
-
-            return;
-        }
-
-
-        setError("");
-
-        setCurrentQuestion(index);
-
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    };
-
-
-    // =====================================================
-    // CHECK ALL ANSWERS
-    // =====================================================
-
-    const validateAllAnswers = () => {
-
-        const unansweredQuestions =
-            questions.filter(
-                (_, index) =>
-                    !answers[index] ||
-                    !answers[index].trim()
-            );
-
-
-        if (
-            unansweredQuestions.length > 0
-        ) {
-
-            const firstUnanswered =
-                questions.findIndex(
-                    (_, index) =>
-                        !answers[index] ||
-                        !answers[index].trim()
-                );
-
-
-            setCurrentQuestion(
-                firstUnanswered
-            );
-
-
-            setError(
-                `Please answer all questions. ${unansweredQuestions.length} question(s) are still unanswered.`
-            );
-
-
-            return false;
-        }
-
-
-        return true;
-    };
-
-
-    // =====================================================
-    // FINISH INTERVIEW
-    // =====================================================
 
     const handleFinish = async () => {
-
         setError("");
-
-
-        if (!validateAllAnswers()) {
-
+        const unanswered = questions.filter((_, idx) => !answers[idx] || !answers[idx].trim());
+        if (unanswered.length > 0) {
+            setError(`Please answer all questions before submitting.`);
             return;
         }
 
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to finish the interview? Your answers will be evaluated and your result will be saved."
-            );
-
-
-        if (!confirmed) {
-
-            return;
-        }
-
+        if (!window.confirm("Submit your answers for AI Evaluation?")) return;
 
         try {
-
             setSubmitting(true);
-
             setEvaluationProgress(0);
-
-            setError("");
-
-
             const evaluationResults = [];
 
-
-            // =================================================
-            // EVALUATE EACH ANSWER
-            // =================================================
-
-            for (
-                let index = 0;
-                index < questions.length;
-                index++
-            ) {
-
-                const question =
-                    questions[index];
-
-
-                const answer =
-                    answers[index];
-
-
-                console.log(
-                    `Evaluating question ${index + 1}/${questions.length}`,
-                    question.id
-                );
-
-
-                const response =
-                    await api.post(
-                        "/api/interview/evaluate",
-                        {
-                            questionId:
-                                question.id,
-
-                            answer:
-                                answer.trim()
-                        }
-                    );
-
-
-                evaluationResults.push(
-                    response.data
-                );
-
-
-                setEvaluationProgress(
-                    Math.round(
-                        ((index + 1) /
-                            questions.length) *
-                        100
-                    )
-                );
+            for (let idx = 0; idx < questions.length; idx++) {
+                const q = questions[idx];
+                const ans = answers[idx];
+                const res = await api.post("/api/interview/evaluate", {
+                    questionId: q.id,
+                    answer: ans.trim()
+                });
+                evaluationResults.push(res.data);
+                setEvaluationProgress(Math.round(((idx + 1) / questions.length) * 100));
             }
 
+            const totalScore = evaluationResults.reduce((sum, i) => sum + Number(i.score || 0), 0);
+            const avgScore = evaluationResults.length > 0 ? totalScore / evaluationResults.length : 0;
+            const percentage = Math.round(avgScore * 10);
 
-            // =================================================
-            // CALCULATE SCORE
-            // =================================================
-
-            const totalScore =
-                evaluationResults.reduce(
-                    (sum, item) =>
-                        sum +
-                        Number(
-                            item.score || 0
-                        ),
-                    0
-                );
-
-
-            const averageScore =
-                evaluationResults.length > 0
-                    ? totalScore /
-                    evaluationResults.length
-                    : 0;
-
-
-            const percentage =
-                Math.round(
-                    averageScore * 10
-                );
-
-
-            // =================================================
-            // OVERALL RATING
-            // =================================================
-
-            let overallRating =
-                "Poor";
-
-
-            if (averageScore >= 9) {
-
-                overallRating =
-                    "Excellent";
-
-            } else if (averageScore >= 8) {
-
-                overallRating =
-                    "Very Good";
-
-            } else if (averageScore >= 7) {
-
-                overallRating =
-                    "Good";
-
-            } else if (averageScore >= 5) {
-
-                overallRating =
-                    "Needs Improvement";
-
-            } else if (averageScore >= 3) {
-
-                overallRating =
-                    "Weak";
-            }
-
-
-            // =================================================
-            // RESULT OBJECT
-            // =================================================
+            let rating = "Needs Improvement";
+            if (avgScore >= 8.5) rating = "Excellent";
+            else if (avgScore >= 7) rating = "Good";
 
             const interviewResult = {
-
-                jobId:
-                    Number(jobId),
-
-                completedAt:
-                    new Date().toISOString(),
-
-                results:
-                    evaluationResults
+                jobId: Number(jobId),
+                completedAt: new Date().toISOString(),
+                results: evaluationResults
             };
 
+            const saveRes = await api.post("/api/interview-attempts", {
+                jobId: Number(jobId),
+                totalQuestions: evaluationResults.length,
+                averageScore: Number(avgScore.toFixed(2)),
+                percentage,
+                overallRating: rating,
+                resultJson: JSON.stringify(interviewResult)
+            });
 
-            // =================================================
-            // SAVE ATTEMPT
-            // =================================================
-
-            const saveResponse =
-                await api.post(
-                    "/api/interview-attempts",
-                    {
-                        jobId:
-                            Number(jobId),
-
-                        totalQuestions:
-                            evaluationResults.length,
-
-                        averageScore:
-                            Number(
-                                averageScore.toFixed(2)
-                            ),
-
-                        percentage:
-                            percentage,
-
-                        overallRating:
-                            overallRating,
-
-                        resultJson:
-                            JSON.stringify(
-                                interviewResult
-                            )
-                    }
-                );
-
-
-            console.log(
-                "Interview attempt saved:",
-                saveResponse.data
-            );
-
-
-            // =================================================
-            // STORE LATEST RESULT
-            // =================================================
-
-            const latestResult = {
-
+            sessionStorage.setItem("latestInterviewResult", JSON.stringify({
                 ...interviewResult,
+                attemptId: saveRes.data?.id,
+                averageScore: Number(avgScore.toFixed(2)),
+                percentage,
+                overallRating: rating
+            }));
 
-                attemptId:
-                    saveResponse.data?.id,
-
-                averageScore:
-                    Number(
-                        averageScore.toFixed(2)
-                    ),
-
-                percentage:
-                    percentage,
-
-                overallRating:
-                    overallRating
-            };
-
-
-            sessionStorage.setItem(
-                "latestInterviewResult",
-                JSON.stringify(
-                    latestResult
-                )
-            );
-
-
-            // =================================================
-            // NAVIGATE RESULT
-            // =================================================
-
-            navigate(
-                `/candidate/interview/result/${jobId}`
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Interview submission error:",
-                error
-            );
-
-
-            let message =
-                "Unable to complete the interview.";
-
-
-            if (
-                typeof error.response?.data ===
-                "string"
-            ) {
-
-                message =
-                    error.response.data;
-
-            } else if (
-                error.response?.data?.message
-            ) {
-
-                message =
-                    error.response.data.message;
-
-            } else if (
-                error.message
-            ) {
-
-                message =
-                    error.message;
-            }
-
-
-            setError(message);
-
+            navigate(`/candidate/interview/result/${jobId}`);
+        } catch (err) {
+            console.error("Submission error:", err);
+            setError(err.response?.data?.message || err.message || "Failed to complete evaluation.");
         } finally {
-
             setSubmitting(false);
         }
     };
 
-
-    // =====================================================
-    // LOADING
-    // =====================================================
-
     if (loading) {
-
         return (
-
-            <div className="page-center">
-
-                <h2>
-                    <Icon name="bot" /> Preparing your AI interview...
-                </h2>
-
-                <p>
-                    Loading questions for this job.
-                </p>
-
+            <div className="max-w-4xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Initializing AI Technical Interviewer...</p>
             </div>
         );
     }
-
-
-    // =====================================================
-    // ERROR
-    // =====================================================
-
-    if (
-        error &&
-        questions.length === 0
-    ) {
-
-        return (
-
-            <div>
-
-                <nav className="navbar">
-
-                    {/* <h2>
-                    JobPortal
-                </h2> */}
-                    <div className="brand">
-                        <img
-                            src="/logo.png"
-                            alt="Hirely"
-                            className="brand-logo"
-                        />
-                    </div>
-
-
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate(
-                                "/candidate/dashboard"
-                            )
-                        }
-                    >
-                        <Icon name="left" /> Dashboard
-                    </button>
-
-                </nav>
-
-
-                <main className="dashboard">
-
-                    <div className="dashboard-card">
-
-                        <h1>
-                            AI Interview
-                        </h1>
-
-
-                        <div className="error-message">
-
-                            {error}
-
-                        </div>
-
-
-                        <button
-                            className="primary-button"
-                            onClick={() =>
-                                navigate("/jobs")
-                            }
-                        >
-                            Find Jobs
-                        </button>
-
-                    </div>
-
-                </main>
-
-            </div>
-        );
-    }
-
-
-    // =====================================================
-    // NO QUESTIONS
-    // =====================================================
 
     if (questions.length === 0) {
-
         return (
-
-            <div>
-
-                <nav className="navbar">
-
-                    {/* <h2>
-                    JobPortal
-                </h2> */}
-                    <div className="brand">
-                        <img
-                            src="/logo.png"
-                            alt="Hirely"
-                            className="brand-logo"
-                        />
-                    </div>
-
-
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate(
-                                "/candidate/dashboard"
-                            )
-                        }
-                    >
-                        <Icon name="left" /> Dashboard
-                    </button>
-
-                </nav>
-
-
-                <main className="dashboard">
-
-                    <div className="dashboard-card">
-
-                        <h1>
-                            AI Interview
-                        </h1>
-
-
-                        <p>
-                            No interview questions
-                            are available for this job.
-                        </p>
-
-
-                        <button
-                            className="primary-button"
-                            onClick={() =>
-                                navigate("/jobs")
-                            }
-                        >
-                            Back to Jobs
-                        </button>
-
-                    </div>
-
-                </main>
-
+            <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center">
+                <Icon name="interview" size={40} className="mx-auto text-slate-300 mb-3" />
+                <h2 className="text-lg font-bold text-slate-800">No Questions Found</h2>
+                <p className="text-xs text-slate-500 mt-1">There are no AI interview questions configured for this position.</p>
+                <button onClick={() => navigate("/jobs")} className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl">
+                    Back to Jobs
+                </button>
             </div>
         );
     }
-
-
-    // =====================================================
-    // INTERVIEW INTRODUCTION
-    // =====================================================
 
     if (!interviewStarted) {
-
         return (
-
-            <div>
-
-                <nav className="navbar">
-
-                    {/* <h2>
-                    JobPortal
-                </h2> */}
-                    <div className="brand">
-                        <img
-                            src="/logo.png"
-                            alt="Hirely"
-                            className="brand-logo"
-                        />
+            <div className="max-w-3xl mx-auto px-4 py-12">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-xl text-center space-y-6">
+                    <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                        <Icon name="interview" size={32} />
                     </div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Ready for your AI Technical Interview?</h1>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                        You will be asked <strong>{questions.length} question(s)</strong> tailored to this job role. You can type detailed answers and receive instant scoring and feedback.
+                    </p>
 
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-left text-xs text-slate-600 space-y-2 max-w-md mx-auto">
+                        <div className="font-extrabold text-slate-900 uppercase">Interview Tips</div>
+                        <p>• Provide structured explanations with real-world context.</p>
+                        <p>• Answer all questions before submitting for evaluation.</p>
+                    </div>
 
                     <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate(
-                                `/jobs/${jobId}`
-                            )
-                        }
+                        onClick={() => setInterviewStarted(true)}
+                        className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:scale-105"
                     >
-                        <Icon name="left" /> Back to Job
+                        Begin AI Interview
                     </button>
-
-                </nav>
-
-
-                <main className="dashboard">
-
-                    <div
-                        className="dashboard-card"
-                        style={{
-                            maxWidth:
-                                "800px",
-                            margin:
-                                "0 auto"
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                textAlign:
-                                    "center"
-                            }}
-                        >
-
-                            <div
-                                style={{
-                                    fontSize:
-                                        "60px",
-                                    marginBottom:
-                                        "15px"
-                                }}
-                            >
-                                <Icon name="bot" />
-                            </div>
-
-
-                            <h1>
-                                AI Mock Interview
-                            </h1>
-
-
-                            <p>
-                                Prepare yourself for
-                                the actual interview by
-                                answering job-specific
-                                questions.
-                            </p>
-
-                        </div>
-
-
-                        {/* =================================================
-                            INSTRUCTIONS
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                marginTop:
-                                    "30px",
-                                padding:
-                                    "25px",
-                                border:
-                                    "1px solid #ddd",
-                                borderRadius:
-                                    "15px"
-                            }}
-                        >
-
-                            <h2>
-                                <Icon name="clipboard" /> Interview Instructions
-                            </h2>
-
-
-                            <ul
-                                style={{
-                                    lineHeight:
-                                        "2"
-                                }}
-                            >
-
-                                <li>
-                                    Answer every question
-                                    honestly.
-                                </li>
-
-                                <li>
-                                    Explain your reasoning
-                                    wherever possible.
-                                </li>
-
-                                <li>
-                                    Use examples from your
-                                    projects or experience.
-                                </li>
-
-                                <li>
-                                    Keep technical answers
-                                    clear and structured.
-                                </li>
-
-                                <li>
-                                    You must answer all
-                                    questions before
-                                    finishing.
-                                </li>
-
-                                <li>
-                                    Your answers will be
-                                    automatically evaluated.
-                                </li>
-
-                            </ul>
-
-                        </div>
-
-
-                        {/* =================================================
-                            INTERVIEW INFORMATION
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                display:
-                                    "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(180px, 1fr))",
-                                gap:
-                                    "15px",
-                                marginTop:
-                                    "25px"
-                            }}
-                        >
-
-                            <div
-                                style={{
-                                    padding:
-                                        "20px",
-                                    border:
-                                        "1px solid #ddd",
-                                    borderRadius:
-                                        "12px",
-                                    textAlign:
-                                        "center"
-                                }}
-                            >
-
-                                <h3>
-                                    <Icon name="file" /> Questions
-                                </h3>
-
-                                <p>
-                                    {questions.length}
-                                </p>
-
-                            </div>
-
-
-                            <div
-                                style={{
-                                    padding:
-                                        "20px",
-                                    border:
-                                        "1px solid #ddd",
-                                    borderRadius:
-                                        "12px",
-                                    textAlign:
-                                        "center"
-                                }}
-                            >
-
-                                <h3>
-                                    <Icon name="target" /> Evaluation
-                                </h3>
-
-                                <p>
-                                    0 - 10 Score
-                                </p>
-
-                            </div>
-
-
-                            <div
-                                style={{
-                                    padding:
-                                        "20px",
-                                    border:
-                                        "1px solid #ddd",
-                                    borderRadius:
-                                        "12px",
-                                    textAlign:
-                                        "center"
-                                }}
-                            >
-
-                                <h3>
-                                    <Icon name="brainTopic" /> Topics
-                                </h3>
-
-                                <p>
-                                    Technical + HR
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            START
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                textAlign:
-                                    "center",
-                                marginTop:
-                                    "30px"
-                            }}
-                        >
-
-                            <button
-                                className="primary-button"
-                                onClick={
-                                    handleStartInterview
-                                }
-                                style={{
-                                    fontSize:
-                                        "17px",
-                                    padding:
-                                        "14px 30px"
-                                }}
-                            >
-                                <Icon name="interview" /> Start Interview
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </main>
-
+                </motion.div>
             </div>
         );
     }
 
-
-    // =====================================================
-    // CURRENT QUESTION
-    // =====================================================
-
-    const question =
-        questions[currentQuestion];
-
-
-    const currentAnswer =
-        answers[currentQuestion] || "";
-
-
-    const progress =
-        Math.round(
-            ((currentQuestion + 1) /
-                questions.length) *
-            100
+    if (submitting) {
+        return (
+            <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4">
+                <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <h2 className="text-lg font-black text-slate-900">Evaluating Answers...</h2>
+                <p className="text-xs text-slate-500">AI is scoring your responses and generating feedback report.</p>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-emerald-600 h-full transition-all duration-300" style={{ width: `${evaluationProgress}%` }}></div>
+                </div>
+            </div>
         );
+    }
 
-
-    const isLastQuestion =
-        currentQuestion ===
-        questions.length - 1;
-
-
-    // =====================================================
-    // ANSWERED COUNT
-    // =====================================================
-
-    const answeredCount =
-        questions.filter(
-            (_, index) =>
-                answers[index] &&
-                answers[index].trim()
-        ).length;
-
-
-    // =====================================================
-    // MAIN INTERVIEW UI
-    // =====================================================
+    const currentQ = questions[currentQuestion];
 
     return (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            {/* STEP BAR */}
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                <span className="text-xs font-extrabold text-slate-700">
+                    Question {currentQuestion + 1} of {questions.length}
+                </span>
 
-        <div>
+                <div className="flex gap-1.5">
+                    {questions.map((_, idx) => (
+                        <div
+                            key={idx}
+                            className={`w-3 h-3 rounded-full transition-colors ${
+                                idx === currentQuestion
+                                    ? "bg-blue-600 ring-2 ring-blue-200"
+                                    : answers[idx]
+                                    ? "bg-emerald-500"
+                                    : "bg-slate-200"
+                            }`}
+                        ></div>
+                    ))}
+                </div>
+            </div>
 
-            {/* =================================================
-                NAVBAR
-            ================================================= */}
+            {/* QUESTION CARD */}
+            <motion.div key={currentQuestion} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+                <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                        Technical Question
+                    </span>
+                    <h2 className="text-lg font-bold text-slate-900 leading-snug">
+                        {currentQ?.questionText || currentQ?.question || "Describe your approach..."}
+                    </h2>
+                </div>
 
-            <nav className="navbar">
+                {error && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                        {error}
+                    </div>
+                )}
 
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
+                <div className="space-y-2">
+                    <label className="block text-xs font-extrabold uppercase text-slate-700">
+                        Your Technical Response
+                    </label>
+                    <textarea
+                        rows={7}
+                        placeholder="Type your explanation clearly..."
+                        value={answers[currentQuestion] || ""}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
                     />
                 </div>
 
-
-                <button
-                    className="secondary-button"
-                    disabled={
-                        submitting
-                    }
-                    onClick={() => {
-
-                        const confirmed =
-                            window.confirm(
-                                "If you leave now, your current answers will be lost. Are you sure?"
-                            );
-
-
-                        if (confirmed) {
-
-                            navigate(
-                                `/jobs/${jobId}`
-                            );
-                        }
-
-                    }}
-                >
-                    Exit Interview
-                </button>
-
-            </nav>
-
-
-            {/* =================================================
-                MAIN
-            ================================================= */}
-
-            <main className="dashboard">
-
-                <div
-                    className="dashboard-card"
-                    style={{
-                        maxWidth:
-                            "1000px",
-                        margin:
-                            "0 auto"
-                    }}
-                >
-
-                    {/* =================================================
-                        HEADER
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            display:
-                                "flex",
-                            justifyContent:
-                                "space-between",
-                            alignItems:
-                                "center",
-                            gap:
-                                "15px",
-                            flexWrap:
-                                "wrap",
-                            marginBottom:
-                                "20px"
-                        }}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <button
+                        onClick={handlePrevious}
+                        disabled={currentQuestion === 0}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl disabled:opacity-40 transition-colors"
                     >
+                        Previous
+                    </button>
 
-                        <div>
-
-                            <h1>
-                                <Icon name="bot" /> AI Interview
-                            </h1>
-
-                            <p>
-                                Answer the question
-                                as if you were in a
-                                real interview.
-                            </p>
-
-                        </div>
-
-
-                        <div
-                            style={{
-                                fontWeight:
-                                    "bold"
-                            }}
-                        >
-                            {answeredCount}
-                            {" / "}
-                            {questions.length}
-                            {" answered"}
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
-                        PROGRESS BAR
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            width:
-                                "100%",
-                            height:
-                                "10px",
-                            background:
-                                "#e5e7eb",
-                            borderRadius:
-                                "10px",
-                            overflow:
-                                "hidden",
-                            marginBottom:
-                                "25px"
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                width:
-                                    `${progress}%`,
-                                height:
-                                    "100%",
-                                background:
-                                    "#2563eb",
-                                transition:
-                                    "width 0.3s ease"
-                            }}
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        QUESTION NAVIGATION
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            display:
-                                "flex",
-                            gap:
-                                "8px",
-                            flexWrap:
-                                "wrap",
-                            marginBottom:
-                                "25px"
-                        }}
-                    >
-
-                        {questions.map(
-                            (_, index) => (
-
-                                <button
-                                    key={
-                                        questions[index].id ||
-                                        index
-                                    }
-                                    type="button"
-                                    disabled={
-                                        submitting
-                                    }
-                                    onClick={() =>
-                                        handleQuestionNavigation(
-                                            index
-                                        )
-                                    }
-                                    style={{
-                                        width:
-                                            "40px",
-                                        height:
-                                            "40px",
-                                        borderRadius:
-                                            "50%",
-                                        border:
-                                            "1px solid #ccc",
-                                        cursor:
-                                            submitting
-                                                ? "not-allowed"
-                                                : "pointer",
-                                        fontWeight:
-                                            "bold",
-                                        background:
-                                            index ===
-                                                currentQuestion
-                                                ? "#2563eb"
-                                                : answers[index]
-                                                    ? "#dcfce7"
-                                                    : "#fff",
-                                        color:
-                                            index ===
-                                                currentQuestion
-                                                ? "#fff"
-                                                : "#111"
-                                    }}
-                                >
-                                    {index + 1}
-                                </button>
-
-                            )
-                        )}
-
-                    </div>
-
-
-                    {/* =================================================
-                        EVALUATION PROGRESS
-                    ================================================= */}
-
-                    {submitting && (
-
-                        <div
-                            style={{
-                                padding:
-                                    "15px",
-                                marginBottom:
-                                    "20px",
-                                border:
-                                    "1px solid #ddd",
-                                borderRadius:
-                                    "12px"
-                            }}
-                        >
-
-                            <strong>
-                                <Icon name="bot" /> Evaluating your
-                                answers...
-                            </strong>
-
-
-                            <div
-                                style={{
-                                    marginTop:
-                                        "10px",
-                                    width:
-                                        "100%",
-                                    height:
-                                        "8px",
-                                    background:
-                                        "#e5e7eb",
-                                    borderRadius:
-                                        "10px",
-                                    overflow:
-                                        "hidden"
-                                }}
-                            >
-
-                                <div
-                                    style={{
-                                        width:
-                                            `${evaluationProgress}%`,
-                                        height:
-                                            "100%",
-                                        background:
-                                            "#16a34a",
-                                        transition:
-                                            "width 0.3s ease"
-                                    }}
-                                />
-
-                            </div>
-
-
-                            <p>
-                                {evaluationProgress}%
-                                complete
-                            </p>
-
-                        </div>
-
-                    )}
-
-
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
-
-                    {error && (
-
-                        <div
-                            className="error-message"
-                            style={{
-                                marginBottom:
-                                    "20px"
-                            }}
-                        >
-                            {error}
-                        </div>
-
-                    )}
-
-
-                    {/* =================================================
-                        QUESTION CARD
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            border:
-                                "1px solid #ddd",
-                            borderRadius:
-                                "15px",
-                            padding:
-                                "25px",
-                            marginTop:
-                                "20px"
-                        }}
-                    >
-
-                        {/* METADATA */}
-
-                        <div
-                            style={{
-                                display:
-                                    "flex",
-                                gap:
-                                    "8px",
-                                flexWrap:
-                                    "wrap",
-                                marginBottom:
-                                    "20px"
-                            }}
-                        >
-
-                            {question.category && (
-
-                                <span
-                                    style={{
-                                        padding:
-                                            "6px 12px",
-                                        borderRadius:
-                                            "20px",
-                                        background:
-                                            "#eff6ff"
-                                    }}
-                                >
-                                    <Icon name="book" />{" "}
-                                    {question.category}
-                                </span>
-
-                            )}
-
-
-                            {question.technology && (
-
-                                <span
-                                    style={{
-                                        padding:
-                                            "6px 12px",
-                                        borderRadius:
-                                            "20px",
-                                        background:
-                                            "#ecfdf5"
-                                    }}
-                                >
-                                    <Icon name="code" />{" "}
-                                    {question.technology}
-                                </span>
-
-                            )}
-
-
-                            {question.difficulty && (
-
-                                <span
-                                    style={{
-                                        padding:
-                                            "6px 12px",
-                                        borderRadius:
-                                            "20px",
-                                        background:
-                                            "#fef3c7"
-                                    }}
-                                >
-                                    <Icon name="target" />{" "}
-                                    {question.difficulty}
-                                </span>
-
-                            )}
-
-                        </div>
-
-
-                        {/* QUESTION */}
-
-                        <h2
-                            style={{
-                                lineHeight:
-                                    "1.5",
-                                marginBottom:
-                                    "25px"
-                            }}
-                        >
-                            {question.question}
-                        </h2>
-
-
-                        {/* ANSWER */}
-
-                        <label
-                            style={{
-                                display:
-                                    "block",
-                                fontWeight:
-                                    "600",
-                                marginBottom:
-                                    "10px"
-                            }}
-                        >
-                            Your Answer
-                        </label>
-
-
-                        <textarea
-                            value={
-                                currentAnswer
-                            }
-                            onChange={(e) =>
-                                handleAnswerChange(
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Type your answer here..."
-                            rows="10"
-                            disabled={
-                                submitting
-                            }
-                            style={{
-                                width:
-                                    "100%",
-                                boxSizing:
-                                    "border-box",
-                                padding:
-                                    "15px",
-                                border:
-                                    "1px solid #ccc",
-                                borderRadius:
-                                    "10px",
-                                resize:
-                                    "vertical",
-                                fontSize:
-                                    "16px",
-                                lineHeight:
-                                    "1.5"
-                            }}
-                        />
-
-
-                        <p
-                            style={{
-                                marginTop:
-                                    "8px",
-                                color:
-                                    "#777"
-                            }}
-                        >
-                            Characters:{" "}
-                            {currentAnswer.length}
-                        </p>
-
-                    </div>
-
-
-                    {/* =================================================
-                        NAVIGATION BUTTONS
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            display:
-                                "flex",
-                            justifyContent:
-                                "space-between",
-                            gap:
-                                "10px",
-                            marginTop:
-                                "25px",
-                            flexWrap:
-                                "wrap"
-                        }}
-                    >
-
+                    {currentQuestion < questions.length - 1 ? (
                         <button
-                            className="secondary-button"
-                            type="button"
-                            onClick={
-                                handlePrevious
-                            }
-                            disabled={
-                                currentQuestion ===
-                                0 ||
-                                submitting
-                            }
+                            onClick={handleNext}
+                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
                         >
-                            <Icon name="left" /> Previous
+                            Next Question
                         </button>
-
-
-                        {!isLastQuestion && (
-
-                            <button
-                                className="primary-button"
-                                type="button"
-                                onClick={
-                                    handleNext
-                                }
-                                disabled={
-                                    submitting
-                                }
-                            >
-                                Save & Continue <Icon name="right" />
-                            </button>
-
-                        )}
-
-
-                        {isLastQuestion && (
-
-                            <button
-                                className="primary-button"
-                                type="button"
-                                onClick={
-                                    handleFinish
-                                }
-                                disabled={
-                                    submitting
-                                }
-                            >
-                                {submitting
-                                    ? `Evaluating ${evaluationProgress}%...`
-                                    : "Finish Interview"}
-                            </button>
-
-                        )}
-
-                    </div>
-
-
-                    {/* =================================================
-                        FOOTER INFORMATION
-                    ================================================= */}
-
-                    <div
-                        style={{
-                            marginTop:
-                                "25px",
-                            padding:
-                                "15px",
-                            borderRadius:
-                                "10px",
-                            background:
-                                "#f8fafc"
-                        }}
-                    >
-
-                        <p
-                            style={{
-                                margin:
-                                    "0"
-                            }}
+                    ) : (
+                        <button
+                            onClick={handleFinish}
+                            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all"
                         >
-                            <Icon name="idea" /> <strong>Tip:</strong>{" "}
-                            Give specific answers
-                            and use examples from
-                            your projects whenever
-                            possible.
-                        </p>
-
-                    </div>
-
+                            Complete & Submit Interview
+                        </button>
+                    )}
                 </div>
-
-            </main>
-
+            </motion.div>
         </div>
     );
 }

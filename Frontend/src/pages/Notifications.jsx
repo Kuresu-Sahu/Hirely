@@ -1,689 +1,240 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { motion } from "framer-motion";
+import { 
+    Bell, 
+    ArrowLeft, 
+    CheckCheck, 
+    Mail, 
+    User, 
+    Award, 
+    Sparkles, 
+    PartyPopper, 
+    XCircle, 
+    AlertCircle, 
+    ChevronRight,
+    BrainCircuit
+} from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import Icon from "../components/Icon";
-
 
 function Notifications() {
-
     const navigate = useNavigate();
+    const { user } = useAuth();
 
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    const {
-        user
-    } = useAuth();
-
-
-    // ==========================================
-    // STATE
-    // ==========================================
-
-    const [notifications, setNotifications] =
-        useState([]);
-
-
-    const [loading, setLoading] =
-        useState(true);
-
-
-    const [error, setError] =
-        useState("");
-
-
-    // ==========================================
-    // DASHBOARD ROUTE
-    // ==========================================
-
-    const dashboardRoute =
-        user?.role === "RECRUITER"
-            ? "/recruiter/dashboard"
-            : "/candidate/dashboard";
-
-
-    // ==========================================
-    // LOAD NOTIFICATIONS
-    // ==========================================
+    const dashboardRoute = user?.role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/dashboard";
 
     const loadNotifications = async () => {
-
         try {
-
             setLoading(true);
-
             setError("");
-
-
-            const response =
-                await api.get(
-                    "/api/notifications"
-                );
-
-
-            setNotifications(
-                Array.isArray(response.data)
-                    ? response.data
-                    : []
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Notification loading error:",
-                error
-            );
-
-
-            setError(
-                error.response?.data ||
-                "Unable to load notifications."
-            );
-
-
+            const response = await api.get("/api/notifications");
+            setNotifications(Array.isArray(response.data) ? response.data : []);
+        } catch (err) {
+            console.error("Notification loading error:", err);
+            setError(err.response?.data || "Unable to load notifications.");
         } finally {
-
             setLoading(false);
         }
     };
 
-
-    // ==========================================
-    // LOAD PAGE
-    // ==========================================
-
     useEffect(() => {
-
         loadNotifications();
-
     }, []);
 
-
-    // ==========================================
-    // MARK AS READ
-    // ==========================================
-
-    const markAsRead = async (
-        notificationId
-    ) => {
-
+    const markAsRead = async (notificationId) => {
         try {
-
-            const response =
-                await api.put(
-                    `/api/notifications/${notificationId}/read`
-                );
-
-
-            setNotifications(
-                previous =>
-                    previous.map(
-                        notification =>
-                            notification.id ===
-                                notificationId
-
-                                ? response.data
-
-                                : notification
-                    )
+            const response = await api.put(`/api/notifications/${notificationId}/read`);
+            setNotifications((prev) =>
+                prev.map((item) => (item.id === notificationId ? response.data : item))
             );
-
-
             return response.data;
-
-
-        } catch (error) {
-
-            console.error(
-                "Mark notification read error:",
-                error
-            );
-
-
+        } catch (err) {
+            console.error("Mark notification read error:", err);
             return null;
         }
     };
 
-
-    // ==========================================
-    // OPEN NOTIFICATION
-    // ==========================================
-
-    const handleNotificationClick = async (
-        notification
-    ) => {
-
-        let updatedNotification =
-            notification;
-
-
-        // --------------------------------------
-        // MARK READ
-        // --------------------------------------
-
+    const handleNotificationClick = async (notification) => {
+        let updatedNotification = notification;
         if (!notification.read) {
-
-            const response =
-                await markAsRead(
-                    notification.id
-                );
-
-
-            if (response) {
-
-                updatedNotification =
-                    response;
-            }
+            const res = await markAsRead(notification.id);
+            if (res) updatedNotification = res;
         }
 
-
-        // --------------------------------------
-        // NAVIGATE
-        // --------------------------------------
-
-        if (
-            updatedNotification.actionUrl
-        ) {
-
-            navigate(
-                updatedNotification.actionUrl
-            );
-
+        if (updatedNotification.actionUrl) {
+            navigate(updatedNotification.actionUrl);
             return;
         }
 
-
-        // --------------------------------------
-        // FALLBACK
-        // --------------------------------------
-
-        if (
-            updatedNotification.type ===
-            "NEW_APPLICATION"
-        ) {
-
-            if (
-                user?.role ===
-                "RECRUITER"
-            ) {
-
-                navigate(
-                    "/recruiter/jobs"
-                );
-
-                return;
-            }
+        if (updatedNotification.type === "NEW_APPLICATION" && user?.role === "RECRUITER") {
+            navigate("/recruiter/jobs");
+            return;
         }
 
-
         if (
-            updatedNotification.type ===
-            "APPLICATION" ||
-            updatedNotification.type ===
-            "SHORTLISTED" ||
-            updatedNotification.type ===
-            "INTERVIEW" ||
-            updatedNotification.type ===
-            "SELECTED" ||
-            updatedNotification.type ===
-            "REJECTED"
+            ["APPLICATION", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"].includes(updatedNotification.type) &&
+            user?.role === "CANDIDATE"
         ) {
-
-            if (
-                user?.role ===
-                "CANDIDATE"
-            ) {
-
-                navigate(
-                    "/my-applications"
-                );
-
-                return;
-            }
+            navigate("/my-applications");
+            return;
         }
-
     };
-
-
-    // ==========================================
-    // MARK ALL AS READ
-    // ==========================================
 
     const markAllAsRead = async () => {
-
         try {
-
-            await api.put(
-                "/api/notifications/read-all"
-            );
-
-
-            setNotifications(
-                previous =>
-                    previous.map(
-                        notification => ({
-                            ...notification,
-                            read: true
-                        })
-                    )
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Mark all notifications error:",
-                error
-            );
-
-
-            setError(
-                "Unable to mark notifications as read."
-            );
+            await api.put("/api/notifications/read-all");
+            setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+        } catch (err) {
+            console.error("Mark all notifications error:", err);
+            setError("Unable to mark notifications as read.");
         }
     };
 
-
-    // ==========================================
-    // DATE FORMAT
-    // ==========================================
-
-    const formatDate = (
-        date
-    ) => {
-
-        if (!date) {
-
-            return "Just now";
-        }
-
-
+    const formatDate = (date) => {
+        if (!date) return "Just now";
         try {
-
-            return new Date(date)
-                .toLocaleString(
-                    "en-IN",
-                    {
-                        dateStyle: "medium",
-                        timeStyle: "short"
-                    }
-                );
-
+            return new Date(date).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
         } catch {
-
             return date;
         }
     };
 
-
-    // ==========================================
-    // ICON
-    // ==========================================
-
-    const getIcon = (
-        type
-    ) => {
-
+    const getIcon = (type) => {
         switch (type) {
-
             case "APPLICATION":
-                return <Icon name="mail" size={18} />;
-
+                return <Mail className="w-5 h-5 text-blue-600" />;
             case "NEW_APPLICATION":
-                return <Icon name="user" size={18} />;
-
+                return <User className="w-5 h-5 text-indigo-600" />;
             case "SHORTLISTED":
-                return <Icon name="trophy" size={18} />;
-
+                return <Award className="w-5 h-5 text-amber-600" />;
             case "INTERVIEW":
-                return <Icon name="interview" size={18} />;
-
+                return <BrainCircuit className="w-5 h-5 text-blue-600" />;
             case "SELECTED":
-                return <Icon name="celebration" size={18} />;
-
+                return <PartyPopper className="w-5 h-5 text-emerald-600" />;
             case "REJECTED":
-                return <Icon name="error" size={18} />;
-
+                return <XCircle className="w-5 h-5 text-rose-500" />;
             default:
-                return <Icon name="bell" size={18} />;
+                return <Bell className="w-5 h-5 text-slate-500" />;
         }
     };
 
-
-    // ==========================================
-    // LOADING
-    // ==========================================
-
     if (loading) {
-
         return (
-
-            <div className="page-center">
-
-                <h2>
-                    Loading notifications...
-                </h2>
-
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium text-slate-500">Loading notifications...</p>
+                </div>
             </div>
         );
     }
 
-
-    // ==========================================
-    // PAGE
-    // ==========================================
+    const hasUnread = notifications.some((n) => !n.read);
 
     return (
-
-        <div>
-
-            {/* ======================================
-                NAVBAR
-            ====================================== */}
-
-            <nav className="navbar">
-
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
-                </div>
-
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate(
-                            dashboardRoute
-                        )
-                    }
-                >
-                    <Icon name="left" /> Dashboard
-                </button>
-
-            </nav>
-
-
-            {/* ======================================
-                MAIN
-            ====================================== */}
-
-            <main className="jobs-page">
-
-                <div
-                    className="jobs-header"
-                    style={{
-                        display: "flex",
-                        justifyContent:
-                            "space-between",
-                        alignItems:
-                            "center",
-                        gap: "20px",
-                        flexWrap:
-                            "wrap"
-                    }}
-                >
-
-                    <div>
-
-                        <h1>
-                            <Icon name="bell" /> Notifications
-                        </h1>
-
-
-                        <p>
-                            {user?.role ===
-                                "RECRUITER"
-
-                                ? "Stay updated about applications and recruitment activity."
-
-                                : "Stay updated about your applications and interviews."
-                            }
-                        </p>
-
+        <div className="min-h-screen bg-slate-50/50 pb-20">
+            {/* Header */}
+            <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate(dashboardRoute)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                            title="Back to dashboard"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <Bell className="w-5 h-5 text-blue-600" /> Notifications
+                            </h1>
+                            <p className="text-xs text-slate-500">
+                                {user?.role === "RECRUITER"
+                                    ? "Recruitment events, applications, and updates"
+                                    : "Application status updates and interview notifications"}
+                            </p>
+                        </div>
                     </div>
 
-
-                    {notifications.some(
-                        notification =>
-                            !notification.read
-                    ) && (
-
-                            <button
-                                className="secondary-button"
-                                onClick={
-                                    markAllAsRead
-                                }
-                            >
-                                <Icon name="check" /> Mark All as Read
-                            </button>
-                        )}
-
+                    {hasUnread && (
+                        <button
+                            onClick={markAllAsRead}
+                            className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                        >
+                            <CheckCheck className="w-4 h-4" />
+                            <span>Mark All Read</span>
+                        </button>
+                    )}
                 </div>
+            </div>
 
-
-                {/* ==================================
-                    ERROR
-                ================================== */}
-
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                 {error && (
-
-                    <div className="error-message">
-
-                        {error}
-
+                    <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-700 text-sm">
+                        <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+                        <span>{error}</span>
                     </div>
                 )}
 
-
-                {/* ==================================
-                    EMPTY
-                ================================== */}
-
-                {!error &&
-                    notifications.length === 0 && (
-
-                        <div className="empty-state">
-
-                            <h2>
-                                No notifications
-                            </h2>
-
-                            <p>
-                                You are all caught up!
-                            </p>
-
-                        </div>
-                    )}
-
-
-                {/* ==================================
-                    NOTIFICATIONS
-                ================================== */}
+                {!error && notifications.length === 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-xs">
+                        <Bell className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                        <h2 className="text-lg font-bold text-slate-800">No notifications</h2>
+                        <p className="text-sm text-slate-500 mt-1">You're all caught up! Check back later for updates.</p>
+                    </div>
+                )}
 
                 {notifications.length > 0 && (
-
-                    <div
-                        style={{
-                            maxWidth:
-                                "900px",
-                            margin:
-                                "0 auto"
-                        }}
-                    >
-
-                        {notifications.map(
-                            notification => (
-
-                                <div
-                                    key={
-                                        notification.id
-                                    }
-                                    onClick={() =>
-                                        handleNotificationClick(
-                                            notification
-                                        )
-                                    }
-                                    style={{
-                                        padding:
-                                            "20px",
-                                        marginBottom:
-                                            "15px",
-                                        border:
-                                            "1px solid #ddd",
-                                        borderRadius:
-                                            "12px",
-                                        background:
-                                            notification.read
-                                                ? "#ffffff"
-                                                : "#f0f7ff",
-                                        cursor:
-                                            "pointer",
-                                        boxShadow:
-                                            "0 2px 8px rgba(0,0,0,0.05)",
-                                        transition:
-                                            "transform 0.15s ease"
-                                    }}
-                                >
-
-                                    <div
-                                        style={{
-                                            display:
-                                                "flex",
-                                            justifyContent:
-                                                "space-between",
-                                            alignItems:
-                                                "flex-start",
-                                            gap:
-                                                "15px"
-                                        }}
-                                    >
-
-                                        <div
-                                            style={{
-                                                display:
-                                                    "flex",
-                                                gap:
-                                                    "15px"
-                                            }}
-                                        >
-
-                                            <div
-                                                style={{
-                                                    fontSize:
-                                                        "30px"
-                                                }}
-                                            >
-                                                {getIcon(
-                                                    notification.type
-                                                )}
-                                            </div>
-
-
-                                            <div>
-
-                                                <h3
-                                                    style={{
-                                                        margin:
-                                                            "0 0 6px"
-                                                    }}
-                                                >
-                                                    {
-                                                        notification.title
-                                                    }
-                                                </h3>
-
-
-                                                <p
-                                                    style={{
-                                                        margin:
-                                                            "0 0 8px"
-                                                    }}
-                                                >
-                                                    {
-                                                        notification.message
-                                                    }
-                                                </p>
-
-
-                                                <small
-                                                    style={{
-                                                        opacity:
-                                                            "0.6"
-                                                    }}
-                                                >
-                                                    {formatDate(
-                                                        notification.createdAt
-                                                    )}
-                                                </small>
-
-
-                                                {notification.actionUrl && (
-
-                                                    <div
-                                                        style={{
-                                                            marginTop:
-                                                                "10px",
-                                                            fontSize:
-                                                                "13px",
-                                                            fontWeight:
-                                                                "600",
-                                                            color:
-                                                                "#2563eb"
-                                                        }}
-                                                    >
-                                                        Click to open <Icon name="right" />
-                                                    </div>
-
-                                                )}
-
-                                            </div>
-
-                                        </div>
-
-
-                                        {!notification.read && (
-
-                                            <span
-                                                style={{
-                                                    background:
-                                                        "#2563eb",
-                                                    color:
-                                                        "white",
-                                                    padding:
-                                                        "5px 9px",
-                                                    borderRadius:
-                                                        "20px",
-                                                    fontSize:
-                                                        "12px",
-                                                    fontWeight:
-                                                        "600"
-                                                }}
-                                            >
-                                                NEW
-                                            </span>
-
-                                        )}
-
+                    <div className="space-y-3">
+                        {notifications.map((n, idx) => (
+                            <motion.div
+                                key={n.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2, delay: idx * 0.03 }}
+                                onClick={() => handleNotificationClick(n)}
+                                className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-4 ${
+                                    n.read
+                                        ? "bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs"
+                                        : "bg-gradient-to-r from-blue-50/90 via-white to-blue-50/40 border-blue-200/90 shadow-xs"
+                                }`}
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                                        {getIcon(n.type)}
                                     </div>
-
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-slate-900 text-sm">{n.title}</h3>
+                                            {!n.read && (
+                                                <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{n.message}</p>
+                                        <span className="text-[11px] font-medium text-slate-400 block mt-2">
+                                            {formatDate(n.createdAt)}
+                                        </span>
+                                    </div>
                                 </div>
-                            ))}
 
+                                <ChevronRight className="w-5 h-5 text-slate-400 shrink-0 self-center" />
+                            </motion.div>
+                        ))}
                     </div>
                 )}
-
             </main>
-
         </div>
     );
 }
-
 
 export default Notifications;

@@ -30,31 +30,51 @@ public class AuthController {
                 this.otpService = otpService;
         }
 
-        // CANDIDATE REGISTER
+        // CANDIDATE REGISTER (Direct, No OTP)
         @PostMapping("/register")
         public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
                 try {
-                        userService.startRegistration(request, "CANDIDATE");
-
-                        return ResponseEntity.ok("OTP sent to your email. Please verify your email.");
+                        LoginResponse response = userService.directRegister(request, "CANDIDATE");
+                        return ResponseEntity.ok(response);
                 } catch (RuntimeException exception) {
                         return ResponseEntity.badRequest().body(exception.getMessage());
                 }
         }
 
-        // RECRUITER REGISTER
+        // RECRUITER REGISTER (Direct, No OTP)
         @PostMapping("/register/recruiter")
         public ResponseEntity<?> registerRecruiter(@Valid @RequestBody RegisterRequest request) {
                 try {
-                        userService.startRegistration(request, "RECRUITER");
-
-                        return ResponseEntity.ok("OTP sent to your email. Please verify your email.");
+                        LoginResponse response = userService.directRegister(request, "RECRUITER");
+                        return ResponseEntity.ok(response);
                 } catch (RuntimeException exception) {
                         return ResponseEntity.badRequest().body(exception.getMessage());
                 }
         }
 
-        // VERIFY REGISTRATION OTP
+        // LOGIN (Direct, No OTP)
+        @PostMapping("/login")
+        public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+                try {
+                        LoginResponse response = userService.directLogin(request);
+                        return ResponseEntity.ok(response);
+                } catch (RuntimeException exception) {
+                        return ResponseEntity.badRequest().body(exception.getMessage());
+                }
+        }
+
+        // GOOGLE AUTH
+        @PostMapping("/google")
+        public ResponseEntity<?> googleAuth(@RequestBody com.hirely.Dto.GoogleAuthRequest request) {
+                try {
+                        LoginResponse response = userService.googleAuth(request);
+                        return ResponseEntity.ok(response);
+                } catch (RuntimeException exception) {
+                        return ResponseEntity.badRequest().body(exception.getMessage());
+                }
+        }
+
+        // VERIFY REGISTRATION OTP (Legacy / Optional)
         @PostMapping("/verify-registration")
         public ResponseEntity<?> verifyRegistration(@Valid @RequestBody OtpRequest request) {
                 try {
@@ -75,19 +95,7 @@ public class AuthController {
                 }
         }
 
-        // LOGIN
-        @PostMapping("/login")
-        public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-                try {
-                        userService.startLogin(request);
-
-                        return ResponseEntity.ok("OTP sent to your email. Please verify your email to continue.");
-                } catch (RuntimeException exception) {
-                        return ResponseEntity.badRequest().body(exception.getMessage());
-                }
-        }
-
-        // VERIFY LOGIN OTP
+        // VERIFY LOGIN OTP (Legacy / Optional)
         @PostMapping("/verify-login")
         public ResponseEntity<?> verifyLogin(@Valid @RequestBody OtpRequest request) {
                 try {

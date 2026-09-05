@@ -1,1809 +1,242 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { motion } from "framer-motion";
 import api from "../services/api";
 import Icon from "../components/Icon";
 
-
 function ResumeAnalysis() {
-
     const { jobId } = useParams();
-
     const navigate = useNavigate();
 
-
-    // =========================================================
-    // STATE
-    // =========================================================
-
     const [job, setJob] = useState(null);
-
     const [resume, setResume] = useState(null);
-
     const [analysis, setAnalysis] = useState(null);
-
     const [loading, setLoading] = useState(true);
-
     const [analyzing, setAnalyzing] = useState(false);
-
     const [error, setError] = useState("");
 
-
-    // =========================================================
-    // LOAD JOB + RESUME
-    // =========================================================
-
     useEffect(() => {
-
         const loadData = async () => {
-
             setLoading(true);
-
             setError("");
-
-
             try {
-
-                const [
-                    jobResponse,
-                    resumeResponse
-                ] = await Promise.all([
-
-                    api.get(
-                        `/api/jobs/${jobId}`
-                    ),
-
-                    api.get(
-                        "/api/resumes/my"
-                    )
-
+                const [jobRes, resumeRes] = await Promise.all([
+                    api.get(`/api/jobs/${jobId}`),
+                    api.get("/api/resumes/my")
                 ]);
-
-
-                setJob(
-                    jobResponse.data
-                );
-
-
-                setResume(
-                    resumeResponse.data
-                );
-
-
-            } catch (error) {
-
-                console.error(
-                    "Error loading resume analysis page:",
-                    error
-                );
-
-
-                const message =
-                    typeof error.response?.data === "string"
-
-                        ? error.response.data
-
-                        : "Unable to load job or resume information.";
-
-
-                setError(
-                    message
-                );
-
-
+                setJob(jobRes.data);
+                setResume(resumeRes.data);
+            } catch (err) {
+                console.error("Error loading resume analysis page:", err);
+                setError(err.response?.data || "Unable to load job or resume information.");
             } finally {
-
                 setLoading(false);
             }
         };
 
-
-        if (jobId) {
-
-            loadData();
-
-        } else {
-
-            setError(
-                "No job was selected for resume analysis."
-            );
-
+        if (jobId) loadData();
+        else {
+            setError("No job selected.");
             setLoading(false);
         }
-
-
     }, [jobId]);
 
-
-    // =========================================================
-    // ANALYZE RESUME
-    // =========================================================
-
     const handleAnalyze = async () => {
-
         setAnalyzing(true);
-
         setError("");
-
         setAnalysis(null);
-
-
         try {
-
-            const response =
-                await api.post(
-                    `/api/ai/analyze/${jobId}`
-                );
-
-
-            setAnalysis(
-                response.data
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Resume analysis error:",
-                error
-            );
-
-
-            const message =
-                typeof error.response?.data === "string"
-
-                    ? error.response.data
-
-                    : error.response?.data?.message
-
-                    || "Unable to analyze your resume. Please try again.";
-
-
-            setError(
-                message
-            );
-
-
+            const response = await api.post(`/api/ai/analyze/${jobId}`);
+            setAnalysis(response.data);
+        } catch (err) {
+            console.error("Resume analysis error:", err);
+            setError(err.response?.data?.message || err.response?.data || "Unable to analyze resume.");
         } finally {
-
             setAnalyzing(false);
         }
     };
 
-
-    // =========================================================
-    // SCORE HELPERS
-    // =========================================================
-
-    const getScoreColor = (score) => {
-
-        if (score >= 85) {
-
-            return "#16a34a";
-        }
-
-
-        if (score >= 70) {
-
-            return "#2563eb";
-        }
-
-
-        if (score >= 50) {
-
-            return "#d97706";
-        }
-
-
-        return "#dc2626";
+    const getScoreBadge = (score) => {
+        if (score >= 85) return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "Excellent Match" };
+        if (score >= 70) return { bg: "bg-blue-50 text-blue-700 border-blue-200", label: "Good Match" };
+        if (score >= 50) return { bg: "bg-amber-50 text-amber-700 border-amber-200", label: "Moderate Match" };
+        return { bg: "bg-rose-50 text-rose-700 border-rose-200", label: "Needs Tailoring" };
     };
 
+    const safeArray = (val) => (Array.isArray(val) ? val.filter((i) => i && String(i).trim()) : []);
 
-    const getScoreLabel = (score) => {
-
-        if (score >= 85) {
-
-            return "Excellent";
-        }
-
-
-        if (score >= 70) {
-
-            return "Good";
-        }
-
-
-        if (score >= 50) {
-
-            return "Moderate";
-        }
-
-
-        return "Needs Improvement";
-    };
-
-
-    const getScoreMessage = (score) => {
-
-        if (score >= 85) {
-
-            return "Your resume is strongly aligned with this job.";
-
-        }
-
-
-        if (score >= 70) {
-
-            return "Your resume is a good match, but a few improvements can make it stronger.";
-
-        }
-
-
-        if (score >= 50) {
-
-            return "Your resume has a moderate match and should be tailored more closely to this job.";
-
-        }
-
-
-        return "Your resume needs significant improvement to become a stronger match for this job.";
-    };
-
-
-    // =========================================================
-    // SAFE ARRAY
-    // =========================================================
-
-    const safeArray = (value) => {
-
-        if (!Array.isArray(value)) {
-
-            return [];
-        }
-
-
-        return value.filter(
-            item =>
-                item !== null &&
-                item !== undefined &&
-                String(item).trim() !== ""
-        );
-    };
-
-
-    // =========================================================
-    // ANALYSIS SUMMARY
-    // =========================================================
-
-    const analysisSummary = useMemo(() => {
-
-        if (!analysis) {
-
-            return {
-                matched: 0,
-                missing: 0,
-                totalSkills: 0,
-                skillCoverage: 0
-            };
-        }
-
-
-        const matched =
-            safeArray(
-                analysis.matchedSkills
-            );
-
-
-        const missing =
-            safeArray(
-                analysis.missingSkills
-            );
-
-
-        const totalSkills =
-            matched.length +
-            missing.length;
-
-
-        const skillCoverage =
-            totalSkills > 0
-
-                ? Math.round(
-                    (
-                        matched.length /
-                        totalSkills
-                    ) * 100
-                )
-
-                : 0;
-
-
+    const summary = useMemo(() => {
+        if (!analysis) return { matched: 0, missing: 0, total: 0, coverage: 0 };
+        const matched = safeArray(analysis.matchedSkills);
+        const missing = safeArray(analysis.missingSkills);
+        const total = matched.length + missing.length;
         return {
-
             matched: matched.length,
-
             missing: missing.length,
-
-            totalSkills,
-
-            skillCoverage
+            total,
+            coverage: total > 0 ? Math.round((matched.length / total) * 100) : 0
         };
-
-
     }, [analysis]);
 
-
-    // =========================================================
-    // LIST COMPONENT
-    // =========================================================
-
-    const renderList = (
-        items,
-        emptyMessage,
-        type = "normal"
-    ) => {
-
-        const safeItems =
-            safeArray(
-                items
-            );
-
-
-        if (
-            safeItems.length === 0
-        ) {
-
-            return (
-
-                <div
-                    style={{
-                        padding: "15px 0",
-                        color: "#6b7280",
-                        lineHeight: "1.6"
-                    }}
-                >
-
-                    {emptyMessage}
-
-                </div>
-            );
-        }
-
-
-        return (
-
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                    marginTop: "18px"
-                }}
-            >
-
-                {safeItems.map(
-                    (item, index) => (
-
-                        <div
-                            key={`${type}-${index}`}
-                            style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "12px",
-                                padding: "12px 14px",
-                                borderRadius: "10px",
-                                background:
-                                    type === "missing"
-
-                                        ? "#fff7ed"
-
-                                        : type === "strength"
-
-                                            ? "#f0fdf4"
-
-                                            : "#f8fafc"
-                            }}
-                        >
-
-                            <span
-                                style={{
-                                    fontSize: "17px",
-                                    flexShrink: 0
-                                }}
-                            >
-
-                                {type === "missing"
-                                    ? <Icon name="warning" size={17} />
-                                    : type === "strength"
-                                        ? <Icon name="check" size={17} />
-                                        : <Icon name="circle" size={8} />}
-
-                            </span>
-
-
-                            <span
-                                style={{
-                                    lineHeight: "1.6",
-                                    color: "#374151"
-                                }}
-                            >
-                                {item}
-                            </span>
-
-                        </div>
-
-                    )
-                )}
-
-            </div>
-        );
-    };
-
-
-    // =========================================================
-    // LOADING
-    // =========================================================
-
     if (loading) {
-
         return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            fontSize: "42px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        <Icon name="bot" />
-                    </div>
-
-
-                    <h2>
-                        Loading Resume Analyzer...
-                    </h2>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280"
-                        }}
-                    >
-                        Preparing your job and resume information.
-                    </p>
-
-                </div>
-
+            <div className="max-w-4xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Initializing AI ATS Scanner...</p>
             </div>
         );
     }
-
-
-    // =========================================================
-    // JOB NOT FOUND
-    // =========================================================
 
     if (!job) {
-
         return (
-
-            <div
-                className="page-center"
-                style={{
-                    minHeight: "70vh",
-                    padding: "30px"
-                }}
-            >
-
-                <div
-                    style={{
-                        textAlign: "center"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            fontSize: "50px",
-                            marginBottom: "15px"
-                        }}
-                    >
-                        <Icon name="warning" />
-                    </div>
-
-
-                    <h2>
-                        {error || "Job not found"}
-                    </h2>
-
-
-                    <button
-                        className="primary-button"
-                        onClick={() =>
-                            navigate("/jobs")
-                        }
-                    >
-                        Back to Jobs
-                    </button>
-
-                </div>
-
+            <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center">
+                <Icon name="warning" size={36} className="mx-auto text-rose-500 mb-3" />
+                <h2 className="text-lg font-bold text-slate-900">{error || "Job not found"}</h2>
+                <button onClick={() => navigate("/jobs")} className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl">
+                    Back to Jobs
+                </button>
             </div>
         );
     }
 
-
-    // =========================================================
-    // MAIN PAGE
-    // =========================================================
-
     return (
-
-        <div
-            style={{
-                minHeight: "100vh",
-                background: "#f8fafc"
-            }}
-        >
-
-            {/* =================================================
-                NAVBAR
-            ================================================= */}
-
-            <nav
-                className="navbar"
-                style={{
-                    background: "white",
-                    borderBottom:
-                        "1px solid #e5e7eb"
-                }}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <button
+                onClick={() => navigate(`/jobs/${job.id}`)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
             >
+                <Icon name="left" size={14} />
+                <span>Back to {job.title}</span>
+            </button>
 
-                {/* <h2>
-                    JobPortal
-                </h2> */}
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
-                </div>
-
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate(
-                            `/jobs/${job.id}`
-                        )
-                    }
-                >
-                    <Icon name="left" /> Back to Job
-                </button>
-
-            </nav>
-
-
-            {/* =================================================
-                MAIN CONTENT
-            ================================================= */}
-
-            <main
-                style={{
-                    maxWidth: "1150px",
-                    margin: "0 auto",
-                    padding: "35px 20px 60px"
-                }}
-            >
-
-                {/* =================================================
-                    PAGE HEADER
-                ================================================= */}
-
-                <div
-                    style={{
-                        marginBottom: "28px"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "7px 12px",
-                            borderRadius: "999px",
-                            background: "#eef2ff",
-                            color: "#4338ca",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            marginBottom: "12px"
-                        }}
-                    >
-                        <Icon name="bot" /> Resume Intelligence
+            {/* HEADER */}
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-extrabold mb-2">
+                        <Icon name="bot" size={14} />
+                        <span>AI ATS Match Engine</span>
                     </div>
-
-
-                    <h1
-                        style={{
-                            marginBottom: "10px"
-                        }}
-                    >
-                        Resume Analyzer
-                    </h1>
-
-
-                    <p
-                        style={{
-                            color: "#6b7280",
-                            lineHeight: "1.7",
-                            maxWidth: "750px",
-                            margin: 0
-                        }}
-                    >
-                        Compare your resume against this job
-                        and identify the skills, strengths and
-                        improvements that can increase your match.
+                    <h1 className="text-2xl font-black text-slate-900">{job.title}</h1>
+                    <p className="text-xs text-slate-500 font-semibold mt-1">
+                        {job.company?.name || "Company"} • {job.location || "Location Flexible"}
                     </p>
-
                 </div>
 
-
-                {/* =================================================
-                    JOB CARD
-                ================================================= */}
-
-                <div
-                    style={{
-                        background: "white",
-                        padding: "25px",
-                        borderRadius: "16px",
-                        marginBottom: "22px",
-                        border:
-                            "1px solid #e5e7eb",
-                        boxShadow:
-                            "0 4px 18px rgba(0,0,0,0.04)"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            gap: "20px",
-                            flexWrap: "wrap"
-                        }}
+                {resume ? (
+                    <button
+                        onClick={handleAnalyze}
+                        disabled={analyzing}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all flex items-center gap-2"
                     >
+                        <Icon name="sparkles" size={16} />
+                        <span>{analyzing ? "Scanning Resume..." : "Run AI Resume Scan"}</span>
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => navigate("/resume")}
+                        className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
+                    >
+                        Upload Resume First
+                    </button>
+                )}
+            </div>
 
-                        <div>
-
-                            <p
-                                style={{
-                                    margin: "0 0 7px",
-                                    color: "#6b7280",
-                                    fontSize: "14px"
-                                }}
-                            >
-                                Analyzing resume for
-                            </p>
-
-
-                            <h2
-                                style={{
-                                    margin: 0
-                                }}
-                            >
-                                {job.title}
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    margin:
-                                        "8px 0 0",
-                                    color: "#4b5563"
-                                }}
-                            >
-                                <Icon name="building" />{" "}
-                                {job.company?.name ||
-                                    "Company"}
-                            </p>
-
-                        </div>
-
-
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "10px",
-                                flexWrap: "wrap"
-                            }}
-                        >
-
-                            <span
-                                style={{
-                                    padding: "8px 12px",
-                                    borderRadius: "8px",
-                                    background: "#f8fafc",
-                                    color: "#475569",
-                                    fontSize: "14px"
-                                }}
-                            >
-                                <Icon name="pin" /> {job.location ||
-                                    "Location not specified"}
-                            </span>
-
-
-                            <span
-                                style={{
-                                    padding: "8px 12px",
-                                    borderRadius: "8px",
-                                    background: "#f8fafc",
-                                    color: "#475569",
-                                    fontSize: "14px"
-                                }}
-                            >
-                                <Icon name="briefcase" /> {job.experience ||
-                                    "Experience not specified"}
-                            </span>
-
-
-                            <span
-                                style={{
-                                    padding: "8px 12px",
-                                    borderRadius: "8px",
-                                    background: "#f8fafc",
-                                    color: "#475569",
-                                    fontSize: "14px"
-                                }}
-                            >
-                                <Icon name="tag" /> {job.jobType ||
-                                    "Job type not specified"}
-                            </span>
-
-                        </div>
-
-                    </div>
-
+            {error && (
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                    {error}
                 </div>
+            )}
 
-
-                {/* =================================================
-                    RESUME CARD
-                ================================================= */}
-
-                <div
-                    style={{
-                        background: "white",
-                        padding: "25px",
-                        borderRadius: "16px",
-                        marginBottom: "22px",
-                        border:
-                            "1px solid #e5e7eb",
-                        boxShadow:
-                            "0 4px 18px rgba(0,0,0,0.04)"
-                    }}
-                >
-
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "20px",
-                            flexWrap: "wrap"
-                        }}
-                    >
-
-                        <div>
-
-                            <h2
-                                style={{
-                                    marginTop: 0,
-                                    marginBottom: "8px"
-                                }}
-                            >
-                                <Icon name="file" /> Your Resume
-                            </h2>
-
-
-                            {resume ? (
-
-                                <>
-
-                                    <p
-                                        style={{
-                                            margin:
-                                                "0 0 5px",
-                                            fontWeight: "600"
-                                        }}
-                                    >
-                                        {resume.fileName}
-                                    </p>
-
-
-                                    <p
-                                        style={{
-                                            margin: 0,
-                                            color: "#6b7280",
-                                            lineHeight: "1.5"
-                                        }}
-                                    >
-                                        This resume will be
-                                        compared with the selected
-                                        job description.
-                                    </p>
-
-                                </>
-
-                            ) : (
-
-                                <p
-                                    style={{
-                                        color: "#6b7280"
-                                    }}
-                                >
-                                    You have not uploaded a resume yet.
-                                </p>
-
-                            )}
-
+            {/* ANALYSIS RESULTS */}
+            {analysis && (
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                    {/* SCORE OVERVIEW */}
+                    <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
+                        <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                            <span className="text-[11px] font-extrabold uppercase text-slate-400">Match Score</span>
+                            <div className="text-4xl font-black text-slate-900 mt-1">{analysis.atsScore || analysis.matchPercentage || 0}%</div>
+                            <span className={`mt-2 text-xs font-extrabold px-3 py-1 rounded-full border ${getScoreBadge(analysis.atsScore || analysis.matchPercentage || 0).bg}`}>
+                                {getScoreBadge(analysis.atsScore || analysis.matchPercentage || 0).label}
+                            </span>
                         </div>
 
-
-                        {resume ? (
-
-                            <button
-                                className="primary-button"
-                                onClick={handleAnalyze}
-                                disabled={analyzing}
-                                style={{
-                                    minWidth: "190px"
-                                }}
-                            >
-
-                                {analyzing
-                                    ? "Analyzing..."
-                                    : analysis
-                                        ? "Analyze Again"
-                                        : <><Icon name="bot" /> Analyze My Resume</>}
-
-                            </button>
-
-                        ) : (
-
-                            <button
-                                className="primary-button"
-                                onClick={() =>
-                                    navigate("/resume")
-                                }
-                            >
-                                Upload Resume
-                            </button>
-
-                        )}
-
+                        <div className="sm:col-span-2 space-y-3">
+                            <h3 className="text-xs font-extrabold uppercase text-slate-500">Skill Alignment Coverage</h3>
+                            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500"
+                                    style={{ width: `${summary.coverage}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-600 font-bold">
+                                <span>{summary.matched} Matched Skills</span>
+                                <span>{summary.missing} Missing Skills</span>
+                            </div>
+                        </div>
                     </div>
 
-                </div>
+                    {/* SKILLS BREAKDOWN GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* MATCHED SKILLS */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                            <h3 className="text-sm font-black text-emerald-900 flex items-center gap-2">
+                                <Icon name="check" size={18} className="text-emerald-600" />
+                                Matched Qualifications & Keywords
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {safeArray(analysis.matchedSkills).length > 0 ? (
+                                    safeArray(analysis.matchedSkills).map((s, idx) => (
+                                        <span key={idx} className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/60">
+                                            ✓ {s}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-slate-400">No explicit matching keywords detected.</p>
+                                )}
+                            </div>
+                        </div>
 
-
-                {/* =================================================
-                    ERROR
-                ================================================= */}
-
-                {error && (
-
-                    <div
-                        className="error-message"
-                        style={{
-                            marginBottom: "22px",
-                            padding: "15px",
-                            borderRadius: "10px"
-                        }}
-                    >
-                        {error}
+                        {/* MISSING SKILLS */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                            <h3 className="text-sm font-black text-amber-900 flex items-center gap-2">
+                                <Icon name="warning" size={18} className="text-amber-600" />
+                                Missing / Recommended Keywords
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {safeArray(analysis.missingSkills).length > 0 ? (
+                                    safeArray(analysis.missingSkills).map((s, idx) => (
+                                        <span key={idx} className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200/60">
+                                            + {s}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-emerald-600 font-bold">Great job! All required skills matched.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                )}
 
-
-                {/* =================================================
-                    ANALYZING STATE
-                ================================================= */}
-
-                {analyzing && (
-
-                    <div
-                        style={{
-                            background: "white",
-                            padding: "30px",
-                            borderRadius: "16px",
-                            marginBottom: "22px",
-                            border:
-                                "1px solid #e5e7eb",
-                            textAlign: "center"
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                fontSize: "38px",
-                                marginBottom: "10px"
-                            }}
-                        >
-                            <Icon name="search" />
+                    {/* AI RECOMMENDATIONS */}
+                    {safeArray(analysis.improvementTips || analysis.suggestions).length > 0 && (
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                                <Icon name="sparkles" size={18} className="text-blue-600" />
+                                AI Resume Optimization Suggestions
+                            </h3>
+                            <ul className="space-y-2.5">
+                                {safeArray(analysis.improvementTips || analysis.suggestions).map((tip, idx) => (
+                                    <li key={idx} className="text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-start gap-2.5 leading-relaxed">
+                                        <span className="text-blue-600 font-bold">•</span>
+                                        <span>{tip}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-
-
-                        <h2
-                            style={{
-                                marginBottom: "8px"
-                            }}
-                        >
-                            Analyzing your resume
-                        </h2>
-
-
-                        <p
-                            style={{
-                                color: "#6b7280",
-                                margin: 0
-                            }}
-                        >
-                            Comparing your resume with the job
-                            requirements. This may take a moment.
-                        </p>
-
-                    </div>
-                )}
-
-
-                {/* =================================================
-                    ANALYSIS RESULT
-                ================================================= */}
-
-                {analysis && !analyzing && (
-
-                    <div>
-
-                        {/* =================================================
-                            SCORE + SUMMARY
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "minmax(260px, 1fr) minmax(300px, 1.5fr)",
-                                gap: "22px",
-                                marginBottom: "22px"
-                            }}
-                        >
-
-                            {/* SCORE */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)",
-                                    textAlign: "center"
-                                }}
-                            >
-
-                                <p
-                                    style={{
-                                        margin: 0,
-                                        color: "#6b7280",
-                                        fontWeight: "600"
-                                    }}
-                                >
-                                    ATS COMPATIBILITY
-                                </p>
-
-
-                                <div
-                                    style={{
-                                        fontSize: "72px",
-                                        fontWeight: "800",
-                                        lineHeight: "1",
-                                        color:
-                                            getScoreColor(
-                                                analysis.atsScore
-                                            ),
-                                        margin:
-                                            "18px 0 8px"
-                                    }}
-                                >
-                                    {analysis.atsScore ?? 0}
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        color: "#6b7280",
-                                        fontWeight: "600"
-                                    }}
-                                >
-                                    out of 100
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        display: "inline-block",
-                                        marginTop: "15px",
-                                        padding:
-                                            "7px 14px",
-                                        borderRadius:
-                                            "999px",
-                                        background:
-                                            `${getScoreColor(
-                                                analysis.atsScore
-                                            )}15`,
-                                        color:
-                                            getScoreColor(
-                                                analysis.atsScore
-                                            ),
-                                        fontWeight: "700"
-                                    }}
-                                >
-                                    {getScoreLabel(
-                                        analysis.atsScore
-                                    )}
-                                </div>
-
-
-                                <p
-                                    style={{
-                                        color: "#6b7280",
-                                        lineHeight: "1.6",
-                                        marginBottom: 0
-                                    }}
-                                >
-                                    {getScoreMessage(
-                                        analysis.atsScore
-                                    )}
-                                </p>
-
-                            </div>
-
-
-                            {/* SUMMARY */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)"
-                                }}
-                            >
-
-                                <h2
-                                    style={{
-                                        marginTop: 0
-                                    }}
-                                >
-                                    <Icon name="analytics" /> Match Summary
-                                </h2>
-
-
-                                <p
-                                    style={{
-                                        color: "#6b7280",
-                                        lineHeight: "1.6"
-                                    }}
-                                >
-                                    Your resume was compared
-                                    against the detected
-                                    job-relevant skills.
-                                </p>
-
-
-                                {/* SKILL COVERAGE */}
-
-                                <div
-                                    style={{
-                                        marginTop: "20px"
-                                    }}
-                                >
-
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent:
-                                                "space-between",
-                                            marginBottom: "8px"
-                                        }}
-                                    >
-
-                                        <strong>
-                                            Skill Coverage
-                                        </strong>
-
-
-                                        <strong
-                                            style={{
-                                                color: "#2563eb"
-                                            }}
-                                        >
-                                            {analysisSummary.skillCoverage}%
-                                        </strong>
-
-                                    </div>
-
-
-                                    <div
-                                        style={{
-                                            height: "10px",
-                                            background: "#e5e7eb",
-                                            borderRadius: "999px",
-                                            overflow: "hidden"
-                                        }}
-                                    >
-
-                                        <div
-                                            style={{
-                                                width:
-                                                    `${analysisSummary.skillCoverage}%`,
-                                                height: "100%",
-                                                background: "#2563eb",
-                                                borderRadius: "999px",
-                                                transition:
-                                                    "width 0.5s ease"
-                                            }}
-                                        />
-
-                                    </div>
-
-                                </div>
-
-
-                                {/* SUMMARY CARDS */}
-
-                                <div
-                                    style={{
-                                        display: "grid",
-                                        gridTemplateColumns:
-                                            "repeat(3, 1fr)",
-                                        gap: "12px",
-                                        marginTop: "25px"
-                                    }}
-                                >
-
-                                    <div
-                                        style={{
-                                            padding: "16px",
-                                            borderRadius: "12px",
-                                            background: "#f0fdf4"
-                                        }}
-                                    >
-
-                                        <div
-                                            style={{
-                                                fontSize: "25px",
-                                                fontWeight: "800",
-                                                color: "#16a34a"
-                                            }}
-                                        >
-                                            {analysisSummary.matched}
-                                        </div>
-
-
-                                        <div
-                                            style={{
-                                                color: "#166534",
-                                                fontSize: "13px",
-                                                marginTop: "4px"
-                                            }}
-                                        >
-                                            Matched
-                                        </div>
-
-                                    </div>
-
-
-                                    <div
-                                        style={{
-                                            padding: "16px",
-                                            borderRadius: "12px",
-                                            background: "#fff7ed"
-                                        }}
-                                    >
-
-                                        <div
-                                            style={{
-                                                fontSize: "25px",
-                                                fontWeight: "800",
-                                                color: "#ea580c"
-                                            }}
-                                        >
-                                            {analysisSummary.missing}
-                                        </div>
-
-
-                                        <div
-                                            style={{
-                                                color: "#9a3412",
-                                                fontSize: "13px",
-                                                marginTop: "4px"
-                                            }}
-                                        >
-                                            Missing
-                                        </div>
-
-                                    </div>
-
-
-                                    <div
-                                        style={{
-                                            padding: "16px",
-                                            borderRadius: "12px",
-                                            background: "#f8fafc"
-                                        }}
-                                    >
-
-                                        <div
-                                            style={{
-                                                fontSize: "25px",
-                                                fontWeight: "800",
-                                                color: "#475569"
-                                            }}
-                                        >
-                                            {analysisSummary.totalSkills}
-                                        </div>
-
-
-                                        <div
-                                            style={{
-                                                color: "#475569",
-                                                fontSize: "13px",
-                                                marginTop: "4px"
-                                            }}
-                                        >
-                                            Detected
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            OVERALL FEEDBACK
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                background: "white",
-                                padding: "30px",
-                                borderRadius: "16px",
-                                marginBottom: "22px",
-                                border:
-                                    "1px solid #e5e7eb",
-                                boxShadow:
-                                    "0 4px 18px rgba(0,0,0,0.04)"
-                            }}
-                        >
-
-                            <h2
-                                style={{
-                                    marginTop: 0
-                                }}
-                            >
-                                <Icon name="file" /> Overall Feedback
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    lineHeight: "1.8",
-                                    color: "#374151",
-                                    marginBottom: 0
-                                }}
-                            >
-                                {analysis.overallFeedback ||
-                                    "No overall feedback available."}
-                            </p>
-
-                        </div>
-
-
-                        {/* =================================================
-                            SKILLS
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(300px, 1fr))",
-                                gap: "22px",
-                                marginBottom: "22px"
-                            }}
-                        >
-
-                            {/* MATCHED SKILLS */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)"
-                                }}
-                            >
-
-                                <h2
-                                    style={{
-                                        marginTop: 0
-                                    }}
-                                >
-                                    <Icon name="success" /> Matched Skills
-                                </h2>
-
-
-                                <p
-                                    style={{
-                                        color: "#6b7280",
-                                        marginBottom: 0
-                                    }}
-                                >
-                                    Skills detected in your resume
-                                    that align with the job.
-                                </p>
-
-
-                                {renderList(
-                                    analysis.matchedSkills,
-                                    "No matching skills were detected.",
-                                    "strength"
-                                )}
-
-                            </div>
-
-
-                            {/* MISSING SKILLS */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)"
-                                }}
-                            >
-
-                                <h2
-                                    style={{
-                                        marginTop: 0
-                                    }}
-                                >
-                                    <Icon name="warning" /> Missing Skills
-                                </h2>
-
-
-                                <p
-                                    style={{
-                                        color: "#6b7280",
-                                        marginBottom: 0
-                                    }}
-                                >
-                                    Job-relevant skills that were
-                                    not detected in your resume.
-                                </p>
-
-
-                                {renderList(
-                                    analysis.missingSkills,
-                                    "No important missing skills were detected.",
-                                    "missing"
-                                )}
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            STRENGTHS + WEAKNESSES
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(300px, 1fr))",
-                                gap: "22px",
-                                marginBottom: "22px"
-                            }}
-                        >
-
-                            {/* STRENGTHS */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)"
-                                }}
-                            >
-
-                                <h2
-                                    style={{
-                                        marginTop: 0
-                                    }}
-                                >
-                                    <Icon name="strength" /> Strengths
-                                </h2>
-
-
-                                {renderList(
-                                    analysis.strengths,
-                                    "No specific strengths were identified.",
-                                    "strength"
-                                )}
-
-                            </div>
-
-
-                            {/* WEAKNESSES */}
-
-                            <div
-                                style={{
-                                    background: "white",
-                                    padding: "30px",
-                                    borderRadius: "16px",
-                                    border:
-                                        "1px solid #e5e7eb",
-                                    boxShadow:
-                                        "0 4px 18px rgba(0,0,0,0.04)"
-                                }}
-                            >
-
-                                <h2
-                                    style={{
-                                        marginTop: 0
-                                    }}
-                                >
-                                    <Icon name="warning" /> Weaknesses
-                                </h2>
-
-
-                                {renderList(
-                                    analysis.weaknesses,
-                                    "No major weaknesses were identified.",
-                                    "missing"
-                                )}
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            SUGGESTIONS
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                background: "white",
-                                padding: "30px",
-                                borderRadius: "16px",
-                                marginBottom: "22px",
-                                border:
-                                    "1px solid #e5e7eb",
-                                boxShadow:
-                                    "0 4px 18px rgba(0,0,0,0.04)"
-                            }}
-                        >
-
-                            <h2
-                                style={{
-                                    marginTop: 0
-                                }}
-                            >
-                                <Icon name="idea" /> What You Should Do
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    color: "#6b7280",
-                                    lineHeight: "1.6"
-                                }}
-                            >
-                                Focus on these recommendations
-                                before applying for this position.
-                            </p>
-
-
-                            {renderList(
-                                analysis.suggestions,
-                                "No additional suggestions were generated."
-                            )}
-
-                        </div>
-
-
-                        {/* =================================================
-                            RESUME IMPROVEMENTS
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                background: "white",
-                                padding: "30px",
-                                borderRadius: "16px",
-                                marginBottom: "22px",
-                                border:
-                                    "1px solid #e5e7eb",
-                                boxShadow:
-                                    "0 4px 18px rgba(0,0,0,0.04)"
-                            }}
-                        >
-
-                            <h2
-                                style={{
-                                    marginTop: 0
-                                }}
-                            >
-                                <Icon name="chart" /> Resume Improvements
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    color: "#6b7280",
-                                    lineHeight: "1.6"
-                                }}
-                            >
-                                These improvements can make your
-                                resume clearer and more ATS-friendly.
-                            </p>
-
-
-                            {renderList(
-                                analysis.resumeImprovements,
-                                "No major structural improvements were identified."
-                            )}
-
-                        </div>
-
-
-                        {/* =================================================
-                            NEXT STEPS
-                        ================================================= */}
-
-                        <div
-                            className="resume-analysis-next-steps"
-                            style={{
-                                background:
-                                    "linear-gradient(135deg, var(--primary-light), var(--surface-soft))",
-                                padding: "30px",
-                                borderRadius: "16px",
-                                marginBottom: "25px",
-                                border:
-                                    "1px solid var(--border)"
-                            }}
-                        >
-
-                            <h2
-                                style={{
-                                    marginTop: 0
-                                }}
-                            >
-                                <Icon name="rocket" /> Recommended Next Steps
-                            </h2>
-
-
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "12px",
-                                    marginTop: "18px"
-                                }}
-                            >
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "12px",
-                                        alignItems: "flex-start"
-                                    }}
-                                >
-
-                                    <strong>
-                                        1.
-                                    </strong>
-
-
-                                    <span
-                                        style={{
-                                            lineHeight: "1.6"
-                                        }}
-                                    >
-                                        Review the missing skills and
-                                        only add skills you genuinely
-                                        know or have experience with.
-                                    </span>
-
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "12px",
-                                        alignItems: "flex-start"
-                                    }}
-                                >
-
-                                    <strong>
-                                        2.
-                                    </strong>
-
-
-                                    <span
-                                        style={{
-                                            lineHeight: "1.6"
-                                        }}
-                                    >
-                                        Improve the resume bullets using
-                                        measurable results wherever possible.
-                                    </span>
-
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "12px",
-                                        alignItems: "flex-start"
-                                    }}
-                                >
-
-                                    <strong>
-                                        3.
-                                    </strong>
-
-
-                                    <span
-                                        style={{
-                                            lineHeight: "1.6"
-                                        }}
-                                    >
-                                        Tailor the resume to this specific
-                                        job instead of using exactly the
-                                        same resume everywhere.
-                                    </span>
-
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "12px",
-                                        alignItems: "flex-start"
-                                    }}
-                                >
-
-                                    <strong>
-                                        4.
-                                    </strong>
-
-
-                                    <span
-                                        style={{
-                                            lineHeight: "1.6"
-                                        }}
-                                    >
-                                        Run the analyzer again after making
-                                        meaningful resume changes.
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            ACTION BUTTONS
-                        ================================================= */}
-
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "12px",
-                                flexWrap: "wrap",
-                                paddingBottom: "20px"
-                            }}
-                        >
-
-                            <button
-                                className="primary-button"
-                                onClick={handleAnalyze}
-                                disabled={analyzing}
-                            >
-
-                                {analyzing
-                                    ? "Analyzing..."
-                                    : <><Icon name="scan" /> Analyze Again</>}
-
-                            </button>
-
-
-                            <button
-                                className="secondary-button"
-                                onClick={() =>
-                                    navigate(
-                                        `/jobs/${job.id}`
-                                    )
-                                }
-                            >
-                                <Icon name="left" /> Back to Job
-                            </button>
-
-
-                            <button
-                                className="secondary-button"
-                                onClick={() =>
-                                    navigate("/resume")
-                                }
-                            >
-                                <Icon name="file" /> Manage Resume
-                            </button>
-
-                        </div>
-
-                    </div>
-                )}
-
-            </main>
-
+                    )}
+                </motion.div>
+            )}
         </div>
     );
 }
-
 
 export default ResumeAnalysis;

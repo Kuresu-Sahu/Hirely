@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { motion } from "framer-motion";
+import { 
+    Building2, 
+    Globe, 
+    MapPin, 
+    Briefcase, 
+    ArrowLeft, 
+    CheckCircle2, 
+    AlertCircle, 
+    PlusCircle,
+    Sparkles
+} from "lucide-react";
 import api from "../services/api";
-import Icon from "../components/Icon";
 
 function Company() {
     const navigate = useNavigate();
@@ -28,14 +38,11 @@ function Company() {
         try {
             const response = await api.get("/api/companies/my");
             setCompany(response.data);
-        } catch (error) {
-            if (
-                error.response?.data ===
-                "You have not created a company yet"
-            ) {
+        } catch (err) {
+            if (err.response?.data === "You have not created a company yet") {
                 setCompany(null);
             } else {
-                console.error("Company loading error:", error);
+                console.error("Company loading error:", err);
                 setError("Unable to load company information.");
             }
         } finally {
@@ -43,37 +50,27 @@ function Company() {
         }
     };
 
-    const handleChange = (event) => {
-        const { name, value } = event.target;
-
-        setFormData((previousData) => ({
-            ...previousData,
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
             [name]: value
         }));
     };
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setError("");
         setSuccess("");
         setCreating(true);
 
         try {
-            const response = await api.post(
-                "/api/companies",
-                formData
-            );
-
+            const response = await api.post("/api/companies", formData);
             setCompany(response.data);
-            setSuccess("Company created successfully!");
-        } catch (error) {
-            console.error("Company creation error:", error);
-
-            setError(
-                error.response?.data ||
-                "Unable to create company."
-            );
+            setSuccess("Company profile created successfully!");
+        } catch (err) {
+            console.error("Company creation error:", err);
+            setError(err.response?.data || "Unable to create company.");
         } finally {
             setCreating(false);
         }
@@ -81,262 +78,240 @@ function Company() {
 
     if (loading) {
         return (
-            <div className="page-center">
-                <h2>Loading company...</h2>
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium text-slate-500">Loading company details...</p>
+                </div>
             </div>
         );
     }
 
     if (company) {
         return (
-            <div>
-                <nav className="navbar">
-                    <div className="brand">
-                        <img
-                            src="/logo.png"
-                            alt="Hirely"
-                            className="brand-logo"
-                        />
+            <div className="min-h-screen bg-slate-50/50 pb-20">
+                {/* Header */}
+                <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs">
+                    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate("/recruiter/dashboard")}
+                                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                                title="Back to dashboard"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                            <div>
+                                <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                    <Building2 className="w-5 h-5 text-blue-600" /> My Company Profile
+                                </h1>
+                                <p className="text-xs text-slate-500">Recruiter company information & job management</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
 
-                    <button
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate("/recruiter/dashboard")
-                        }
-                    >
-                        <Icon name="left" /> Dashboard
-                    </button>
-                </nav>
-
-                <main className="dashboard company-page">
-                    <div className="jobs-header">
-                        <h1>
-                            <Icon name="building" /> My Company
-                        </h1>
-
-                        <p>
-                            Manage your company information and
-                            continue building your recruitment profile.
-                        </p>
-                    </div>
-
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                     {success && (
-                        <div className="success-message">
-                            {success}
+                        <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-700 text-sm">
+                            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
+                            <span>{success}</span>
                         </div>
                     )}
 
-                    <section className="dashboard-card company-profile-card">
-                        <div className="company-profile-icon">
-                            <Icon name="building" size={26} />
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-10 shadow-xs space-y-6"
+                    >
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-slate-100">
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                                <Building2 className="w-10 h-10 text-white" />
+                            </div>
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-extrabold text-slate-900">{company.name}</h2>
+                                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap pt-1">
+                                    {company.location && (
+                                        <span className="flex items-center gap-1">
+                                            <MapPin className="w-3.5 h-3.5 text-slate-400" /> {company.location}
+                                        </span>
+                                    )}
+                                    {company.website && (
+                                        <a
+                                            href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-blue-600 hover:underline"
+                                        >
+                                            <Globe className="w-3.5 h-3.5" /> {company.website}
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="company-profile-content">
-                            <h2>{company.name}</h2>
-
-                            {company.description && (
-                                <p className="company-profile-description">
+                        {company.description && (
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">About Company</h3>
+                                <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-5 rounded-xl border border-slate-100">
                                     {company.description}
                                 </p>
-                            )}
-
-                            <div className="company-profile-meta">
-                                {company.location && (
-                                    <div>
-                                        <Icon name="pin" />
-                                        <span>{company.location}</span>
-                                    </div>
-                                )}
-
-                                {company.website && (
-                                    <div>
-                                        <Icon name="globe" />
-                                        <span>{company.website}</span>
-                                    </div>
-                                )}
                             </div>
+                        )}
 
-                            <div className="job-actions">
-                                <button
-                                    className="primary-button"
-                                    onClick={() =>
-                                        navigate("/recruiter/jobs")
-                                    }
-                                >
-                                    <Icon name="briefcase" />
-                                    Manage Jobs
-                                </button>
-                            </div>
+                        <div className="pt-4 flex items-center gap-4">
+                            <button
+                                onClick={() => navigate("/recruiter/jobs")}
+                                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2"
+                            >
+                                <Briefcase className="w-4 h-4" />
+                                <span>Manage Company Jobs</span>
+                            </button>
                         </div>
-                    </section>
+                    </motion.div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div>
-            <nav className="navbar">
-                <div className="brand">
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
-                </div>
-
-                <button
-                    className="secondary-button"
-                    onClick={() =>
-                        navigate("/recruiter/dashboard")
-                    }
-                >
-                    <Icon name="left" /> Dashboard
-                </button>
-            </nav>
-
-            <main className="form-page company-create-page">
-                <div className="company-create-shell">
-                    <div className="company-create-header">
-                        <div className="company-create-badge">
-                            <Icon name="building" size={24} />
-                        </div>
-
+        <div className="min-h-screen bg-slate-50/50 pb-20">
+            <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate("/recruiter/dashboard")}
+                            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                            title="Back to dashboard"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
                         <div>
-                            <span className="eyebrow">
-                                Recruiter setup
-                            </span>
-
-                            <h1>Create your company</h1>
-
-                            <p>
-                                Set up your company profile once.
-                                You can then start creating and
-                                managing job postings from Hirely.
-                            </p>
+                            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <Building2 className="w-5 h-5 text-blue-600" /> Create Company Profile
+                            </h1>
+                            <p className="text-xs text-slate-500">Set up your hiring organization profile</p>
                         </div>
                     </div>
+                </div>
+            </div>
 
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
                     {error && (
-                        <div className="error-message">
-                            {error}
+                        <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-700 text-sm">
+                            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+                            <span>{error}</span>
                         </div>
                     )}
 
-                    <form
-                        className="company-create-form"
-                        onSubmit={handleSubmit}
-                    >
-                        <div className="form-section">
-                            <div className="form-section-heading">
-                                <div>
-                                    <h2>Company information</h2>
-                                    <p>
-                                        Add the details candidates
-                                        should see on your company profile.
-                                    </p>
-                                </div>
+                    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
+                        <div className="border-b border-slate-100 pb-5">
+                            <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                <Building2 className="w-5 h-5 text-blue-600" /> Company Details
+                            </h2>
+                            <p className="text-xs text-slate-500">This information will be displayed to job candidates</p>
+                        </div>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                                    Company Name <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="e.g. Acme Technologies Inc."
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                                />
                             </div>
 
-                            <div className="form-grid">
-                                <div className="form-group form-group-full">
-                                    <label htmlFor="company-name">
-                                        Company Name <span>*</span>
-                                    </label>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                                    Company Description
+                                </label>
+                                <textarea
+                                    name="description"
+                                    placeholder="Tell candidates about your company mission, products, culture, and work environment..."
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    rows="6"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                                />
+                            </div>
 
-                                    <input
-                                        id="company-name"
-                                        type="text"
-                                        name="name"
-                                        placeholder="e.g. Acme Technologies"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        autoComplete="organization"
-                                        required
-                                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                                        Website URL
+                                    </label>
+                                    <div className="relative">
+                                        <Globe className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            name="website"
+                                            placeholder="https://example.com"
+                                            value={formData.website}
+                                            onChange={handleChange}
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="form-group form-group-full">
-                                    <label htmlFor="company-description">
-                                        Company Description
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                                        Headquarters / Location
                                     </label>
-
-                                    <textarea
-                                        id="company-description"
-                                        name="description"
-                                        placeholder="Tell candidates about your company, products, culture, and what makes your team different..."
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                        rows="6"
-                                    />
-
-                                    <span className="field-help">
-                                        Keep it clear and candidate-friendly.
-                                    </span>
-                                </div>
-
-                                <div className="form-group">
-                                    <label htmlFor="company-website">
-                                        Website
-                                    </label>
-
-                                    <input
-                                        id="company-website"
-                                        type="text"
-                                        name="website"
-                                        placeholder="https://example.com"
-                                        value={formData.website}
-                                        onChange={handleChange}
-                                        autoComplete="url"
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label htmlFor="company-location">
-                                        Location
-                                    </label>
-
-                                    <input
-                                        id="company-location"
-                                        type="text"
-                                        name="location"
-                                        placeholder="e.g. Bengaluru, India"
-                                        value={formData.location}
-                                        onChange={handleChange}
-                                        autoComplete="address-level2"
-                                    />
+                                    <div className="relative">
+                                        <MapPin className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            name="location"
+                                            placeholder="e.g. Bengaluru, India"
+                                            value={formData.location}
+                                            onChange={handleChange}
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="form-actions company-form-actions">
-                            <button
-                                type="submit"
-                                className="primary-button"
-                                disabled={creating}
-                            >
-                                <Icon name="building" />
-
-                                {creating
-                                    ? "Creating..."
-                                    : "Create Company"}
-                            </button>
-
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                             <button
                                 type="button"
-                                className="secondary-button"
-                                onClick={() =>
-                                    navigate(
-                                        "/recruiter/dashboard"
-                                    )
-                                }
+                                onClick={() => navigate("/recruiter/dashboard")}
+                                className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition-colors"
                             >
                                 Cancel
                             </button>
+                            <button
+                                type="submit"
+                                disabled={creating}
+                                className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all disabled:opacity-60 flex items-center gap-2"
+                            >
+                                {creating ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                        <span>Creating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Building2 className="w-4 h-4" />
+                                        <span>Save Company Profile</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </form>
-                </div>
+                </motion.div>
             </main>
         </div>
     );

@@ -1,867 +1,136 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { motion } from "framer-motion";
 import api from "../services/api";
 import Icon from "../components/Icon";
-import { useAuth } from "../context/AuthContext";
-import NotificationBell from "./NotificationBell";
 
 function ResumeAnalysisHistory() {
     const navigate = useNavigate();
-
-    const {
-        user,
-        logout
-    } = useAuth();
-
     const [analyses, setAnalyses] = useState([]);
-
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
 
-
-    // =========================================================
-    // LOAD ANALYSIS HISTORY
-    // =========================================================
-
     useEffect(() => {
-
-        let mounted = true;
-
-
         const loadHistory = async () => {
-
             setLoading(true);
-
             setError("");
-
-
             try {
-
-                const response =
-                    await api.get(
-                        "/api/resume-analysis/my"
-                    );
-
-
-                if (!mounted) {
-
-                    return;
-                }
-
-
-                const data =
-                    Array.isArray(response.data)
-                        ? response.data
-                        : [];
-
-
-                setAnalyses(data);
-
-
+                const response = await api.get("/api/resume-analysis/my");
+                setAnalyses(Array.isArray(response.data) ? response.data : []);
             } catch (err) {
-
-                console.error(
-                    "Error loading resume analysis history:",
-                    err
-                );
-
-
-                if (!mounted) {
-
-                    return;
-                }
-
-
-                const message =
-                    typeof err.response?.data === "string"
-
-                        ? err.response.data
-
-                        : err.response?.data?.message
-
-                        ||
-                          "Unable to load your resume analysis history.";
-
-
-                setError(message);
-
-                setAnalyses([]);
-
-
+                console.error("Error loading resume analysis history:", err);
+                setError(err.response?.data?.message || "Unable to load analysis history.");
             } finally {
-
-                if (mounted) {
-
-                    setLoading(false);
-                }
+                setLoading(false);
             }
         };
-
-
         loadHistory();
-
-
-        return () => {
-
-            mounted = false;
-        };
-
     }, []);
 
-
-    // =========================================================
-    // SCORE COLOR
-    // =========================================================
-
-    const getScoreColor = (score) => {
-
-        const numericScore =
-            Number(score ?? 0);
-
-
-        if (numericScore >= 85) {
-
-            return "var(--success)";
-        }
-
-
-        if (numericScore >= 70) {
-
-            return "var(--primary)";
-        }
-
-
-        if (numericScore >= 50) {
-
-            return "var(--warning)";
-        }
-
-
-        return "var(--danger)";
+    const getScoreBadge = (score) => {
+        const s = Number(score || 0);
+        if (s >= 85) return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "Excellent" };
+        if (s >= 70) return { bg: "bg-blue-50 text-blue-700 border-blue-200", label: "Good Match" };
+        if (s >= 50) return { bg: "bg-amber-50 text-amber-700 border-amber-200", label: "Moderate" };
+        return { bg: "bg-rose-50 text-rose-700 border-rose-200", label: "Needs Work" };
     };
 
-
-    // =========================================================
-    // SCORE LABEL
-    // =========================================================
-
-    const getScoreLabel = (score) => {
-
-        const numericScore =
-            Number(score ?? 0);
-
-
-        if (numericScore >= 85) {
-
-            return "Excellent";
-        }
-
-
-        if (numericScore >= 70) {
-
-            return "Good";
-        }
-
-
-        if (numericScore >= 50) {
-
-            return "Moderate";
-        }
-
-
-        return "Needs Improvement";
-    };
-
-
-    // =========================================================
-    // DATE FORMAT
-    // =========================================================
-
-    const formatDate = (date) => {
-
-        if (!date) {
-
-            return "Date unavailable";
-        }
-
-
-        const parsedDate =
-            new Date(date);
-
-
-        if (
-            Number.isNaN(
-                parsedDate.getTime()
-            )
-        ) {
-
-            return "Date unavailable";
-        }
-
-
-        return parsedDate.toLocaleString(
-            undefined,
-            {
-                dateStyle: "medium",
-                timeStyle: "short"
-            }
+    if (loading) {
+        return (
+            <div className="max-w-4xl mx-auto py-16 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-600">Retrieving ATS scan history...</p>
+            </div>
         );
-    };
-
-
-    // =========================================================
-    // RENDER
-    // =========================================================
+    }
 
     return (
-
-        <div>
-
-
-            {/* =================================================
-                NAVBAR
-            ================================================= */}
-
-            <nav className="navbar">
-
-                <div className="brand">
-
-                    <img
-                        src="/logo.png"
-                        alt="Hirely"
-                        className="brand-logo"
-                    />
-
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                        <Icon name="history" size={26} className="text-blue-600" />
+                        ATS Analysis History
+                    </h1>
+                    <p className="text-xs text-slate-500 mt-1">
+                        Review your previous AI resume scans, matched keywords, and improvement reports.
+                    </p>
                 </div>
 
-
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "15px"
-                    }}
+                <button
+                    onClick={() => navigate("/candidate/dashboard")}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
                 >
+                    <Icon name="left" size={14} />
+                    <span>Dashboard</span>
+                </button>
+            </div>
 
-                    <NotificationBell />
-
-
-                    <span>
-                        Welcome, {
-                            user?.name ||
-                            "Candidate"
-                        }
-                    </span>
-
-
-                    <button
-                        type="button"
-                        onClick={logout}
-                        className="logout-button"
-                    >
-                        Logout
-                    </button>
-
+            {error && (
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                    {error}
                 </div>
+            )}
 
-            </nav>
-
-
-            {/* =================================================
-                MAIN CONTENT
-            ================================================= */}
-
-            <main className="dashboard">
-
-
-                {/* =================================================
-                    PAGE HEADER
-                ================================================= */}
-
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: "20px",
-                        flexWrap: "wrap",
-                        marginBottom: "30px"
-                    }}
-                >
-
-                    <div>
-
-                        <h1
-                            style={{
-                                marginBottom: "8px"
-                            }}
-                        >
-                            Resume Analysis History
-                        </h1>
-
-
-                        <p
-                            style={{
-                                marginBottom: 0
-                            }}
-                        >
-                            Review your previous ATS scores,
-                            matched keywords, and resume
-                            improvement recommendations.
-                        </p>
-
-                    </div>
-
-
+            {analyses.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 space-y-3">
+                    <Icon name="fileSearch" size={40} className="mx-auto text-slate-300" />
+                    <h3 className="text-base font-bold text-slate-800">No ATS Scans Recorded</h3>
+                    <p className="text-xs text-slate-500">Run an AI scan from any job page to track keyword matches here.</p>
                     <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() =>
-                            navigate(
-                                "/candidate/dashboard"
-                            )
-                        }
+                        onClick={() => navigate("/jobs")}
+                        className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl"
                     >
-                        <Icon name="left" />
-                        Back to Dashboard
+                        Browse Jobs
                     </button>
-
                 </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {analyses.map((item) => {
+                        const score = Number(item.atsScore || 0);
+                        const badge = getScoreBadge(score);
 
-
-                {/* =================================================
-                    LOADING
-                ================================================= */}
-
-                {loading && (
-
-                    <div
-                        className="dashboard-card"
-                        style={{
-                            textAlign: "center",
-                            padding: "55px 25px"
-                        }}
-                    >
-
-                        <Icon
-                            name="history"
-                            size={34}
-                        />
-
-
-                        <h2
-                            style={{
-                                marginTop: "18px",
-                                marginBottom: "8px"
-                            }}
-                        >
-                            Loading analysis history...
-                        </h2>
-
-
-                        <p>
-                            Please wait while we retrieve
-                            your previous resume analyses.
-                        </p>
-
-                    </div>
-
-                )}
-
-
-                {/* =================================================
-                    ERROR
-                ================================================= */}
-
-                {!loading && error && (
-
-                    <div
-                        className="dashboard-card"
-                        style={{
-                            textAlign: "center",
-                            padding: "55px 25px",
-                            borderColor:
-                                "var(--danger)"
-                        }}
-                    >
-
-                        <Icon
-                            name="warning"
-                            size={36}
-                        />
-
-
-                        <h2
-                            style={{
-                                marginTop: "18px",
-                                marginBottom: "8px"
-                            }}
-                        >
-                            Unable to Load Analysis History
-                        </h2>
-
-
-                        <p
-                            style={{
-                                marginBottom: "22px"
-                            }}
-                        >
-                            {error}
-                        </p>
-
-
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: "12px",
-                                flexWrap: "wrap"
-                            }}
-                        >
-
-                            <button
-                                type="button"
-                                className="primary-button"
-                                onClick={() =>
-                                    window.location.reload()
-                                }
+                        return (
+                            <motion.div
+                                key={item.analysisId}
+                                whileHover={{ y: -4 }}
+                                onClick={() => navigate(`/resume-analysis/history/${item.analysisId}`)}
+                                className="cursor-pointer bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between"
                             >
-                                <Icon name="history" />
-                                Try Again
-                            </button>
-
-
-                            <button
-                                type="button"
-                                className="secondary-button"
-                                onClick={() =>
-                                    navigate(
-                                        "/candidate/dashboard"
-                                    )
-                                }
-                            >
-                                <Icon name="left" />
-                                Back to Dashboard
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                )}
-
-
-                {/* =================================================
-                    EMPTY HISTORY
-                ================================================= */}
-
-                {!loading &&
-                    !error &&
-                    analyses.length === 0 && (
-
-                        <div
-                            className="dashboard-card"
-                            style={{
-                                textAlign: "center",
-                                padding: "60px 25px"
-                            }}
-                        >
-
-                            <Icon
-                                name="fileSearch"
-                                size={42}
-                            />
-
-
-                            <h2
-                                style={{
-                                    marginTop: "18px",
-                                    marginBottom: "8px"
-                                }}
-                            >
-                                No Resume Analyses Yet
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    marginBottom: "24px"
-                                }}
-                            >
-                                Analyze your resume against
-                                a job to see the ATS score
-                                and recommendations here.
-                            </p>
-
-
-                            <button
-                                type="button"
-                                className="primary-button"
-                                onClick={() =>
-                                    navigate("/jobs")
-                                }
-                            >
-                                <Icon name="search" />
-                                Find Jobs
-                            </button>
-
-                        </div>
-
-                    )}
-
-
-                {/* =================================================
-                    ANALYSIS HISTORY
-                ================================================= */}
-
-                {!loading &&
-                    !error &&
-                    analyses.length > 0 && (
-
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(300px, 1fr))",
-                                gap: "18px"
-                            }}
-                        >
-
-                            {analyses.map((item) => {
-
-                                const score =
-                                    Number(
-                                        item.atsScore ?? 0
-                                    );
-
-
-                                const scoreColor =
-                                    getScoreColor(score);
-
-
-                                return (
-
-                                    <article
-                                        key={
-                                            item.analysisId
-                                        }
-                                        className="dashboard-card"
-                                        style={{
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            minHeight: "265px",
-                                            cursor: "pointer"
-                                        }}
-                                        onClick={() =>
-                                            navigate(
-                                                `/resume-analysis/history/${item.analysisId}`
-                                            )
-                                        }
-                                    >
-
-
-                                        {/* =================================================
-                                            CARD HEADER
-                                        ================================================= */}
-
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent:
-                                                    "space-between",
-                                                alignItems:
-                                                    "flex-start",
-                                                gap: "15px",
-                                                marginBottom:
-                                                    "20px"
-                                            }}
-                                        >
-
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems:
-                                                        "center",
-                                                    gap: "10px",
-                                                    minWidth: 0
-                                                }}
-                                            >
-
-                                                <div
-                                                    style={{
-                                                        width: "42px",
-                                                        height: "42px",
-                                                        flexShrink: 0,
-                                                        display:
-                                                            "grid",
-                                                        placeItems:
-                                                            "center",
-                                                        borderRadius:
-                                                            "12px",
-                                                        background:
-                                                            "var(--primary-light)",
-                                                        color:
-                                                            "var(--primary)"
-                                                    }}
-                                                >
-                                                    <Icon
-                                                        name="fileSearch"
-                                                    />
-                                                </div>
-
-
-                                                <div
-                                                    style={{
-                                                        minWidth: 0
-                                                    }}
-                                                >
-
-                                                    <h2
-                                                        style={{
-                                                            margin: 0,
-                                                            fontSize:
-                                                                "18px",
-                                                            overflow:
-                                                                "hidden",
-                                                            textOverflow:
-                                                                "ellipsis",
-                                                            whiteSpace:
-                                                                "nowrap"
-                                                        }}
-                                                        title={
-                                                            item.jobTitle ||
-                                                            "Job Analysis"
-                                                        }
-                                                    >
-                                                        {
-                                                            item.jobTitle ||
-                                                            "Job Analysis"
-                                                        }
-                                                    </h2>
-
-
-                                                    <p
-                                                        style={{
-                                                            margin:
-                                                                "4px 0 0",
-                                                            color:
-                                                                "var(--text-muted)",
-                                                            fontSize:
-                                                                "13px"
-                                                        }}
-                                                    >
-                                                        {
-                                                            formatDate(
-                                                                item.analyzedAt
-                                                            )
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-
-                                            {/* =================================================
-                                                SCORE
-                                            ================================================= */}
-
-                                            <div
-                                                style={{
-                                                    flexShrink: 0,
-                                                    textAlign: "center",
-                                                    minWidth: "72px"
-                                                }}
-                                            >
-
-                                                <div
-                                                    style={{
-                                                        fontSize:
-                                                            "28px",
-                                                        fontWeight:
-                                                            800,
-                                                        lineHeight:
-                                                            1,
-                                                        color:
-                                                            scoreColor
-                                                    }}
-                                                >
-                                                    {score}
-                                                </div>
-
-
-                                                <div
-                                                    style={{
-                                                        marginTop:
-                                                            "5px",
-                                                        fontSize:
-                                                            "11px",
-                                                        color:
-                                                            "var(--text-muted)",
-                                                        fontWeight:
-                                                            600
-                                                    }}
-                                                >
-                                                    ATS SCORE
-                                                </div>
-
-                                            </div>
-
+                                <div>
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                                            <Icon name="fileSearch" size={20} />
                                         </div>
+                                        <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${badge.bg}`}>
+                                            {badge.label}
+                                        </span>
+                                    </div>
 
+                                    <h3 className="text-base font-bold text-slate-900 line-clamp-1">
+                                        {item.jobTitle || "Job ATS Analysis"}
+                                    </h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {item.analyzedAt ? new Date(item.analyzedAt).toLocaleDateString() : "Date N/A"}
+                                    </p>
 
-                                        {/* =================================================
-                                            SCORE BAR
-                                        ================================================= */}
+                                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-slate-500">ATS Score</span>
+                                        <span className="text-xl font-black text-slate-900">{score}%</span>
+                                    </div>
+                                </div>
 
-                                        <div
-                                            style={{
-                                                height: "8px",
-                                                width: "100%",
-                                                borderRadius:
-                                                    "999px",
-                                                background:
-                                                    "var(--surface-soft)",
-                                                overflow:
-                                                    "hidden",
-                                                marginBottom:
-                                                    "10px"
-                                            }}
-                                        >
-
-                                            <div
-                                                style={{
-                                                    width: `${Math.min(
-                                                        100,
-                                                        Math.max(
-                                                            0,
-                                                            score
-                                                        )
-                                                    )}%`,
-                                                    height: "100%",
-                                                    borderRadius:
-                                                        "999px",
-                                                    background:
-                                                        scoreColor,
-                                                    transition:
-                                                        "width 0.25s ease"
-                                                }}
-                                            />
-
-                                        </div>
-
-
-                                        {/* =================================================
-                                            SCORE INFORMATION
-                                        ================================================= */}
-
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent:
-                                                    "space-between",
-                                                alignItems:
-                                                    "center",
-                                                gap: "12px",
-                                                marginBottom:
-                                                    "22px"
-                                            }}
-                                        >
-
-                                            <span
-                                                style={{
-                                                    color:
-                                                        scoreColor,
-                                                    fontWeight:
-                                                        700,
-                                                    fontSize:
-                                                        "14px"
-                                                }}
-                                            >
-                                                {
-                                                    getScoreLabel(
-                                                        score
-                                                    )
-                                                }
-                                            </span>
-
-
-                                            <span
-                                                style={{
-                                                    color:
-                                                        "var(--text-muted)",
-                                                    fontSize:
-                                                        "13px"
-                                                }}
-                                            >
-                                                Analysis #
-                                                {
-                                                    item.analysisId
-                                                }
-                                            </span>
-
-                                        </div>
-
-
-                                        {/* =================================================
-                                            VIEW BUTTON
-                                        ================================================= */}
-
-                                        <div
-                                            style={{
-                                                marginTop:
-                                                    "auto"
-                                            }}
-                                        >
-
-                                            <button
-                                                type="button"
-                                                className="primary-button"
-                                                style={{
-                                                    width:
-                                                        "100%"
-                                                }}
-                                                onClick={(
-                                                    event
-                                                ) => {
-
-                                                    event.stopPropagation();
-
-
-                                                    navigate(
-                                                        `/resume-analysis/history/${item.analysisId}`
-                                                    );
-
-                                                }}
-                                            >
-
-                                                <Icon
-                                                    name="eye"
-                                                />
-
-                                                View Analysis
-
-                                            </button>
-
-                                        </div>
-
-                                    </article>
-
-                                );
-
-                            })}
-
-                        </div>
-
-                    )}
-
-            </main>
-
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
+                                    <span>Full Report</span>
+                                    <Icon name="right" size={14} />
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
-
 
 export default ResumeAnalysisHistory;

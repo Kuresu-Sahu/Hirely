@@ -1,8 +1,11 @@
 package com.hirely.Service;
 
+import java.util.UUID;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.hirely.Dto.GoogleAuthRequest;
 import com.hirely.Dto.LoginRequest;
 import com.hirely.Dto.LoginResponse;
 import com.hirely.Dto.RegisterRequest;
@@ -14,26 +17,96 @@ import com.hirely.Security.JwtService;
 @Service
 public class UserService {
         private final UserRepository userRepository;
-
         private final JwtService jwtService;
-
         private final OtpService otpService;
-
         private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
         public UserService(
                         UserRepository userRepository,
                         JwtService jwtService,
                         OtpService otpService) {
-
                 this.userRepository = userRepository;
-
                 this.jwtService = jwtService;
-
                 this.otpService = otpService;
         }
 
-        // START REGISTRATION
+        // DIRECT REGISTRATION (No OTP)
+        public LoginResponse directRegister(RegisterRequest request, String role) {
+                if (request == null) {
+                        throw new RuntimeException("Registration data is required");
+                }
+
+                String email = request.getEmail().trim().toLowerCase();
+                String name = request.getName().trim();
+
+                if (userRepository.existsByEmail(email)) {
+                        throw new RuntimeException("Email already registered");
+                }
+
+                User user = new User();
+                user.setName(name);
+                user.setEmail(email);
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
+                user.setRole(role != null ? role.toUpperCase() : "CANDIDATE");
+
+                if ("RECRUITER".equals(user.getRole())) {
+                        user.setCompany(null);
+                }
+
+                userRepository.save(user);
+                return completeLogin(email);
+        }
+
+        // DIRECT LOGIN (No OTP)
+        public LoginResponse directLogin(LoginRequest request) {
+                if (request == null) {
+                        throw new RuntimeException("Login data is required");
+                }
+
+                String email = request.getEmail().trim().toLowerCase();
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+                boolean passwordMatches = passwordEncoder.matches(
+                                request.getPassword(),
+                                user.getPassword());
+
+                if (!passwordMatches) {
+                        throw new RuntimeException("Invalid email or password");
+                }
+
+                return completeLogin(email);
+        }
+
+        // GOOGLE AUTH (Sign In & Sign Up)
+        public LoginResponse googleAuth(GoogleAuthRequest request) {
+                if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+                        throw new RuntimeException("Google authentication email is required");
+                }
+
+                String email = request.getEmail().trim().toLowerCase();
+                String name = request.getName() != null && !request.getName().isBlank()
+                                ? request.getName().trim()
+                                : email.split("@")[0];
+
+                User user = userRepository.findByEmail(email).orElseGet(() -> {
+                        User newUser = new User();
+                        newUser.setName(name);
+                        newUser.setEmail(email);
+                        // Assign a random secure password for Google Auth users
+                        newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                        String assignedRole = (request.getRole() != null && !request.getRole().isBlank())
+                                        ? request.getRole().toUpperCase()
+                                        : "CANDIDATE";
+                        newUser.setRole(assignedRole);
+                        return userRepository.save(newUser);
+                });
+
+                return completeLogin(user.getEmail());
+        }
+
+        // START REGISTRATION (Deprecated OTP flow)
         public void startRegistration(
                         RegisterRequest request,
                         String role) {
@@ -64,7 +137,7 @@ public class UserService {
                                 role);
         }
 
-        // COMPLETE REGISTRATION
+        // COMPLETE REGISTRATION (Deprecated OTP flow)
         public User completeRegistration(EmailOtp verifiedOtp) {
 
                 if (verifiedOtp == null) {
@@ -96,7 +169,7 @@ public class UserService {
                 return userRepository.save(user);
         }
 
-        // START LOGIN
+        // START LOGIN (Deprecated OTP flow)
         public void startLogin(LoginRequest request) {
 
                 if (request == null) {
@@ -150,12 +223,6 @@ public class UserService {
         public void sendPasswordResetOtp(String email) {
                 email = email.trim().toLowerCase();
 
-                /*
-                 * Do not reveal whether an email is registered.
-                 *
-                 * If the account does not exist, simply return.
-                 */
-
                 if (!userRepository.existsByEmail(email)) {
                         return;
                 }
@@ -186,4 +253,4 @@ public class UserService {
 
                 userRepository.save(user);
         }
-}
+}

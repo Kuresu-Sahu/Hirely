@@ -69,11 +69,6 @@ Hirely integrates OpenAI-powered functionality for:
 - Stateless authentication
 - Environment-based secrets
 
-### 📧 Email
-
-Resend API is integrated for OTP-based email functionality.
-
-> The current deployed version uses Resend's testing sender, so email delivery is limited to the Resend account's authorized testing recipient. A verified custom domain can be configured for unrestricted production email delivery.
 
 ---
 
@@ -102,7 +97,4 @@ Resend API is integrated for OTP-based email functionality.
               │    Database    │        │   AI Features  │
               └────────────────┘        └────────────────┘
                                               
-                                    ┌────────────────┐
-                                    │  Resend API    │
-                                    │  Email / OTP   │
-                                    └────────────────┘
+                                  
